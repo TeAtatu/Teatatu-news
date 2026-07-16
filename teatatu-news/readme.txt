@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.3.0
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -126,13 +126,26 @@ created as `draft` (or `pending`) for a human editor to review.
 
 == Shortcodes ==
 
+The same reference below is also available in-admin at **Teatatu News >
+Shortcodes**, including the Source/Category slugs actually available on the
+current site.
+
 = Per-site =
 
 `[teatatu_news_list]`, `[teatatu_news_grid]`, `[teatatu_news_latest]`
 
-Shared attributes (all optional): `count`, `columns` (grid only), `source`
-(Source slug), `category` (Category slug), `orderby`, `order`, `show_image`,
-`show_excerpt`, `show_source`, `show_category`, `show_date`, `link_target`.
+Shared attributes (all optional): `count`, `columns` (grid only, 1-6,
+default 3), `source` (Source slug), `category` (Category slug), `orderby`,
+`order`, `show_image`, `show_excerpt`, `show_source`, `show_category`,
+`show_date`, `link_target`, `display`.
+
+`display="summary"` is a convenience preset for a minimal card — header,
+excerpt, thumbnail, and the Read More link only — it forces
+`show_source`/`show_category`/`show_date` off regardless of their own
+values (default `display` is `"full"`, which honors every `show_*`
+attribute as normal). `show_image`/`show_excerpt` still apply on top of a
+summary, e.g. `display="summary" show_excerpt="false"` drops the excerpt
+too. Renders with an extra `teatatu-news-summary` CSS class for styling.
 
 = Network-wide (Master Site only, multisite) =
 
@@ -219,6 +232,20 @@ Source/Category term, on every site in the network. Since images are
 link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.3.0 =
+* Added a "Shortcodes" tab to the Teatatu News admin page: an in-admin
+  quick reference covering every shortcode, every attribute (including
+  columns and the display="summary" preset), and the Source/Category
+  slugs actually available on the current site.
+
+= 1.2.0 =
+* Added the `display="summary"` shortcode attribute (all six per-site and
+  network-wide shortcodes) — a minimal-card preset showing only the title,
+  excerpt, thumbnail, and Read More link, suppressing Source/Category/Date/
+  site-label regardless of their own attribute values. Renders with an
+  additional `teatatu-news-summary` CSS class for styling.
+* `columns` is now capped at a maximum of 6 (minimum was already 1).
 
 = 1.1.2 =
 * Fixed: the RSS Feed configuration post type's slug, `teatatu_news_rss_feed`

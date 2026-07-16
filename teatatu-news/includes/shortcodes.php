@@ -51,6 +51,7 @@ function teatatu_news_shortcode_atts( $atts, $extra_defaults = array() ) {
 			'link_target'   => '_self',
 			'exclude_sites' => '',
 			'site_label'    => 'false',
+			'display'       => 'full',
 		),
 		$extra_defaults
 	);
@@ -62,7 +63,7 @@ function teatatu_news_shortcode_atts( $atts, $extra_defaults = array() ) {
 	}
 
 	$atts['count']   = max( 1, (int) $atts['count'] );
-	$atts['columns'] = max( 1, (int) $atts['columns'] );
+	$atts['columns'] = max( 1, min( 6, (int) $atts['columns'] ) );
 
 	$allowed_orderby = array( 'date', 'title', 'modified', 'rand' );
 	if ( ! in_array( $atts['orderby'], $allowed_orderby, true ) ) {
@@ -71,6 +72,19 @@ function teatatu_news_shortcode_atts( $atts, $extra_defaults = array() ) {
 	$atts['order'] = 'ASC' === strtoupper( $atts['order'] ) ? 'ASC' : 'DESC';
 
 	$atts['link_target'] = '_blank' === $atts['link_target'] ? '_blank' : '_self';
+
+	// "summary" is a convenience preset for a minimal card: header, excerpt,
+	// thumbnail, and the Read More link only — it suppresses the Source/
+	// Category/Date/site-label meta line regardless of the individual
+	// show_* attributes. show_image/show_excerpt still apply on top of it
+	// (e.g. display="summary" show_excerpt="false" drops the excerpt too).
+	$atts['display'] = 'summary' === $atts['display'] ? 'summary' : 'full';
+	if ( 'summary' === $atts['display'] ) {
+		$atts['show_source']   = false;
+		$atts['show_category'] = false;
+		$atts['show_date']     = false;
+		$atts['site_label']    = false;
+	}
 
 	return $atts;
 }
@@ -278,9 +292,10 @@ function teatatu_news_render_network_shortcode( $atts, $variant ) {
 function teatatu_news_get_network_feed_items( $atts ) {
 	// Only the attributes that actually change which items get fetched (see
 	// teatatu_news_query_items()) belong in the cache key. Purely visual
-	// attributes (columns, show_*, link_target, site_label) or internal
-	// flags (_variant) must be excluded, or the network shortcodes and the
-	// REST endpoint would never share a cache entry for identical data.
+	// attributes (columns, show_*, display, link_target, site_label) or
+	// internal flags (_variant) must be excluded, or the network shortcodes
+	// and the REST endpoint would never share a cache entry for identical
+	// data.
 	$cache_atts = array_intersect_key(
 		$atts,
 		array_flip( array( 'count', 'source', 'category', 'orderby', 'order', 'exclude_sites' ) )
@@ -361,12 +376,13 @@ function teatatu_news_render_items( array $items, array $atts ) {
 		return '<p class="teatatu-news-empty">' . esc_html__( 'No news items found.', 'teatatu-news' ) . '</p>';
 	}
 
-	$variant = isset( $atts['_variant'] ) ? $atts['_variant'] : 'list';
+	$variant       = isset( $atts['_variant'] ) ? $atts['_variant'] : 'list';
+	$summary_class = 'summary' === $atts['display'] ? ' teatatu-news-summary' : '';
 
 	ob_start();
 	if ( 'grid' === $variant ) {
 		?>
-		<div class="teatatu-news-grid" style="--teatatu-news-columns: <?php echo esc_attr( $atts['columns'] ); ?>;">
+		<div class="teatatu-news-grid<?php echo esc_attr( $summary_class ); ?>" style="--teatatu-news-columns: <?php echo esc_attr( $atts['columns'] ); ?>;">
 			<?php foreach ( $items as $item ) : ?>
 				<div class="teatatu-news-card"><?php echo teatatu_news_render_item_markup( $item, $atts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped piece by piece ?></div>
 			<?php endforeach; ?>
@@ -374,11 +390,11 @@ function teatatu_news_render_items( array $items, array $atts ) {
 		<?php
 	} elseif ( 'latest' === $variant ) {
 		?>
-		<div class="teatatu-news-latest"><?php echo teatatu_news_render_item_markup( $items[0], $atts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped piece by piece ?></div>
+		<div class="teatatu-news-latest<?php echo esc_attr( $summary_class ); ?>"><?php echo teatatu_news_render_item_markup( $items[0], $atts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped piece by piece ?></div>
 		<?php
 	} else {
 		?>
-		<ul class="teatatu-news-list">
+		<ul class="teatatu-news-list<?php echo esc_attr( $summary_class ); ?>">
 			<?php foreach ( $items as $item ) : ?>
 				<li class="teatatu-news-list-item"><?php echo teatatu_news_render_item_markup( $item, $atts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped piece by piece ?></li>
 			<?php endforeach; ?>

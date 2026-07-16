@@ -35,7 +35,7 @@ function teatatu_news_render_admin_page() {
 	}
 
 	$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'news';
-	if ( ! in_array( $tab, array( 'news', 'sources', 'categories', 'rss' ), true ) ) {
+	if ( ! in_array( $tab, array( 'news', 'sources', 'categories', 'rss', 'shortcodes' ), true ) ) {
 		$tab = 'news';
 	}
 	?>
@@ -48,6 +48,7 @@ function teatatu_news_render_admin_page() {
 			<?php if ( current_user_can( 'manage_teatatu_news_rss_feeds' ) ) : ?>
 				<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'rss' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'rss' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'RSS Feeds', 'teatatu-news' ); ?></a>
 			<?php endif; ?>
+			<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'shortcodes' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'shortcodes' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Shortcodes', 'teatatu-news' ); ?></a>
 		</h2>
 		<?php teatatu_news_render_admin_notices(); ?>
 		<?php
@@ -57,8 +58,10 @@ function teatatu_news_render_admin_page() {
 			teatatu_news_render_term_tab( 'teatatu_news_source' );
 		} elseif ( 'categories' === $tab ) {
 			teatatu_news_render_term_tab( 'teatatu_news_category' );
-		} else {
+		} elseif ( 'rss' === $tab ) {
 			teatatu_news_render_rss_feeds_tab();
+		} else {
+			teatatu_news_render_shortcodes_tab();
 		}
 		?>
 	</div>
@@ -629,4 +632,158 @@ function teatatu_news_handle_delete_term() {
 	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'Deleted.', 'teatatu-news' ), 45 );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => $tab_slug ), admin_url( 'admin.php' ) ) );
 	exit;
+}
+
+// -----------------------------------------------------------------------
+// Shortcodes tab (reference only — no data mutation, no extra capability)
+// -----------------------------------------------------------------------
+
+/**
+ * Renders the "Shortcodes" reference tab: a quick, in-admin explanation of
+ * every shortcode and attribute so editors don't need to consult readme.txt.
+ */
+function teatatu_news_render_shortcodes_tab() {
+	?>
+	<h2><?php esc_html_e( 'Shortcodes', 'teatatu-news' ); ?></h2>
+	<p><?php esc_html_e( 'Use these shortcodes in any post, page, or widget to display News. Every shortcode accepts the same set of optional attributes, so you can adjust each placement to fit.', 'teatatu-news' ); ?></p>
+
+	<h3><?php esc_html_e( 'Per-Site Shortcodes', 'teatatu-news' ); ?></h3>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th style="width:240px;"><?php esc_html_e( 'Shortcode', 'teatatu-news' ); ?></th>
+				<th><?php esc_html_e( 'What it shows', 'teatatu-news' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><code>[teatatu_news_list]</code></td>
+				<td><?php esc_html_e( 'A simple vertical list of News items from this site.', 'teatatu-news' ); ?></td>
+			</tr>
+			<tr>
+				<td><code>[teatatu_news_grid]</code></td>
+				<td><?php esc_html_e( 'A card grid of News items from this site, with images. Use the columns attribute to set cards per row.', 'teatatu-news' ); ?></td>
+			</tr>
+			<tr>
+				<td><code>[teatatu_news_latest]</code></td>
+				<td><?php esc_html_e( 'The single most recent News item from this site, shown headline-style.', 'teatatu-news' ); ?></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<?php if ( is_multisite() ) : ?>
+		<h3><?php esc_html_e( 'Network-Wide Shortcodes (Master Site only)', 'teatatu-news' ); ?></h3>
+		<p class="description"><?php esc_html_e( 'These aggregate News from every site in the network, but only produce output on the site currently configured as the Master Site (Network Admin > Settings > Teatatu News). Elsewhere, admins see a reminder notice and everyone else sees nothing.', 'teatatu-news' ); ?></p>
+		<table class="wp-list-table widefat fixed striped">
+			<thead>
+				<tr>
+					<th style="width:240px;"><?php esc_html_e( 'Shortcode', 'teatatu-news' ); ?></th>
+					<th><?php esc_html_e( 'What it shows', 'teatatu-news' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td><code>[teatatu_news_network_list]</code></td>
+					<td><?php esc_html_e( 'The list view, aggregated across every site in the network.', 'teatatu-news' ); ?></td>
+				</tr>
+				<tr>
+					<td><code>[teatatu_news_network_grid]</code></td>
+					<td><?php esc_html_e( 'The grid view, aggregated across every site in the network.', 'teatatu-news' ); ?></td>
+				</tr>
+				<tr>
+					<td><code>[teatatu_news_network_latest]</code></td>
+					<td><?php esc_html_e( 'The single most recent item across the whole network.', 'teatatu-news' ); ?></td>
+				</tr>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
+	<h3><?php esc_html_e( 'Attributes (all optional, work on every shortcode above)', 'teatatu-news' ); ?></h3>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th style="width:160px;"><?php esc_html_e( 'Attribute', 'teatatu-news' ); ?></th>
+				<th><?php esc_html_e( 'What it controls', 'teatatu-news' ); ?></th>
+				<th style="width:130px;"><?php esc_html_e( 'Default', 'teatatu-news' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td><code>count</code></td><td><?php esc_html_e( 'How many News items to show.', 'teatatu-news' ); ?></td><td>5</td></tr>
+			<tr><td><code>columns</code></td><td><?php esc_html_e( 'Grid shortcodes only: cards per row, from 1 to 6.', 'teatatu-news' ); ?></td><td>3</td></tr>
+			<tr><td><code>source</code></td><td><?php esc_html_e( 'Only show items from one Source, by its slug (see the list below).', 'teatatu-news' ); ?></td><td><?php esc_html_e( 'all Sources', 'teatatu-news' ); ?></td></tr>
+			<tr><td><code>category</code></td><td><?php esc_html_e( 'Only show items from one Category, by its slug (see the list below).', 'teatatu-news' ); ?></td><td><?php esc_html_e( 'all Categories', 'teatatu-news' ); ?></td></tr>
+			<tr><td><code>orderby</code></td><td><?php esc_html_e( 'Sort by date, title, modified, or rand (random order).', 'teatatu-news' ); ?></td><td>date</td></tr>
+			<tr><td><code>order</code></td><td><?php esc_html_e( 'Sort direction: ASC (oldest/A-Z first) or DESC.', 'teatatu-news' ); ?></td><td>DESC</td></tr>
+			<tr><td><code>display</code></td><td><?php esc_html_e( 'Set to summary for a minimal card — title, excerpt, image, and Read More link only. Source, Category, and Date are hidden no matter what the show_* attributes below say.', 'teatatu-news' ); ?></td><td>full</td></tr>
+			<tr><td><code>show_image</code></td><td><?php esc_html_e( 'Show the image (true or false).', 'teatatu-news' ); ?></td><td>true</td></tr>
+			<tr><td><code>show_excerpt</code></td><td><?php esc_html_e( 'Show the excerpt (true or false).', 'teatatu-news' ); ?></td><td>true</td></tr>
+			<tr><td><code>show_source</code></td><td><?php esc_html_e( 'Show the Source name (true or false).', 'teatatu-news' ); ?></td><td>true</td></tr>
+			<tr><td><code>show_category</code></td><td><?php esc_html_e( 'Show the Category name (true or false).', 'teatatu-news' ); ?></td><td>true</td></tr>
+			<tr><td><code>show_date</code></td><td><?php esc_html_e( 'Show the publish date (true or false).', 'teatatu-news' ); ?></td><td>true</td></tr>
+			<tr><td><code>link_target</code></td><td><?php esc_html_e( 'Open links in the same tab (_self) or a new tab (_blank).', 'teatatu-news' ); ?></td><td>_self</td></tr>
+		</tbody>
+	</table>
+
+	<?php if ( is_multisite() ) : ?>
+		<h3><?php esc_html_e( 'Extra attributes for network-wide shortcodes only', 'teatatu-news' ); ?></h3>
+		<table class="wp-list-table widefat fixed striped">
+			<thead>
+				<tr>
+					<th style="width:160px;"><?php esc_html_e( 'Attribute', 'teatatu-news' ); ?></th>
+					<th><?php esc_html_e( 'What it controls', 'teatatu-news' ); ?></th>
+					<th style="width:130px;"><?php esc_html_e( 'Default', 'teatatu-news' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td><code>exclude_sites</code></td><td><?php esc_html_e( 'Comma-separated site IDs to leave out of the aggregate.', 'teatatu-news' ); ?></td><td><?php esc_html_e( 'none', 'teatatu-news' ); ?></td></tr>
+				<tr><td><code>site_label</code></td><td><?php esc_html_e( 'Show which site each item came from (true or false).', 'teatatu-news' ); ?></td><td>false</td></tr>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
+	<h3><?php esc_html_e( 'Sources and Categories available on this site', 'teatatu-news' ); ?></h3>
+	<p class="description"><?php esc_html_e( 'Use these slugs with the source and category attributes above.', 'teatatu-news' ); ?></p>
+	<table class="wp-list-table widefat fixed striped">
+		<tbody>
+			<tr>
+				<th style="width:160px;"><?php esc_html_e( 'Sources', 'teatatu-news' ); ?></th>
+				<td><?php echo wp_kses_post( teatatu_news_render_term_slug_list( 'teatatu_news_source' ) ); ?></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'Categories', 'teatatu-news' ); ?></th>
+				<td><?php echo wp_kses_post( teatatu_news_render_term_slug_list( 'teatatu_news_category' ) ); ?></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<h3><?php esc_html_e( 'Example', 'teatatu-news' ); ?></h3>
+	<p><code>[teatatu_news_grid count="6" columns="3" display="summary"]</code></p>
+	<p class="description"><?php esc_html_e( 'A 3-column grid of the 6 most recent News items, showing only the title, excerpt, image, and Read More link.', 'teatatu-news' ); ?></p>
+	<?php
+}
+
+/**
+ * Comma-separated, code-formatted list of a taxonomy's term slugs, for the
+ * Shortcodes reference tab.
+ *
+ * @param string $taxonomy Taxonomy slug.
+ * @return string
+ */
+function teatatu_news_render_term_slug_list( $taxonomy ) {
+	$terms = get_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => false ) );
+	if ( empty( $terms ) || is_wp_error( $terms ) ) {
+		return esc_html__( 'None yet.', 'teatatu-news' );
+	}
+	$slugs = wp_list_pluck( $terms, 'slug' );
+	return implode( ', ', array_map( 'teatatu_news_wrap_code', $slugs ) );
+}
+
+/**
+ * Wraps a single string in an escaped <code> tag.
+ *
+ * @param string $value Value to wrap.
+ * @return string
+ */
+function teatatu_news_wrap_code( $value ) {
+	return '<code>' . esc_html( $value ) . '</code>';
 }

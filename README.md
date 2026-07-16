@@ -24,7 +24,9 @@ WordPress 6.0+ / PHP 7.4+ site (single-site or multisite) and activate it.
   agent-facing workflow.
 - Gives non-technical editors one maintenance screen (**Teatatu News** in
   the admin menu) to manage News items, Sources, and Categories without
-  touching the standard post-list UI.
+  touching the standard post-list UI — including a **Shortcodes** tab that
+  documents every shortcode and attribute in plain language, right where
+  editors are already working.
 - Provides shortcodes — `[teatatu_news_list]`, `[teatatu_news_grid]`,
   `[teatatu_news_latest]` — for displaying News anywhere on the site.
 - On a **multisite** network: network-activate once and every site gets its

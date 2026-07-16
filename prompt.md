@@ -195,6 +195,12 @@ Preserve these invariants unless the change explicitly asks to alter them:
       interacts with over the REST API
     - The plugin's Version header in teatatu-news.php, and note the change
       under == Changelog == in readme.txt
+    - The in-admin Shortcodes tab (teatatu_news_render_shortcodes_tab() in
+      includes/admin-page.php), if the change adds, removes, or changes the
+      meaning/default of a shortcode attribute — it's a second, independent
+      copy of the same reference readme.txt carries, specifically so
+      editors don't have to leave wp-admin; a change to one without the
+      other goes stale silently since nothing enforces they match.
 
 Ask before changing: the capability boundaries in point 3, the
 no-custom-tables constraint in point 1, or the draft-first/human-gated
@@ -217,7 +223,7 @@ not implementation details.
 | `includes/meta-boxes.php` | Post meta registration (REST-exposed), "News Details" meta box UI + save |
 | `includes/image-url.php` | `teatatu_news_get_image_url()` — link-only URL resolution, no download/storage |
 | `includes/admin-columns.php` | Sortable admin list-table columns |
-| `includes/admin-page.php` | Top-level maintenance screen: News/Sources/Categories tabs, admin-post.php handlers |
+| `includes/admin-page.php` | Top-level maintenance screen: News/Sources/Categories tabs + admin-post.php handlers, and the read-only Shortcodes reference tab |
 | `includes/rest-api.php` | The one custom REST route: `/teatatu-news/v1/network-feed` |
 | `includes/shortcodes.php` | Per-site + network shortcodes, shared renderer, shared aggregation/cache function |
 | `includes/updater.php` | GitHub-release-based self-hosted auto-updater |
