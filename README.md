@@ -41,10 +41,12 @@ WordPress 6.0+ / PHP 7.4+ site (single-site or multisite) and activate it.
   its own check cadence, and pausable without deleting its config), with a
   configurable per-field content mapping (Title/Excerpt/Image, by HTML
   element and class/id) sourced from either the feed's own data or the
-  linked article page. New items land as drafts like everything else; if a
-  feed later shows an already-published item again, the change is held as a
-  pending update on that post for a human to review and apply — never
-  applied automatically.
+  linked article page. By default, new items land as drafts like everything
+  else, and a later update to an already-published item is held as a
+  pending update for a human to review and apply — never applied
+  automatically. Each feed can independently opt into publishing new items
+  immediately or applying updates immediately, but only for a user who
+  already holds real publish/edit-published rights.
 - Uses **only standard WordPress database tables** — no custom tables, and
   no local file storage of any kind. Images are link-only.
 

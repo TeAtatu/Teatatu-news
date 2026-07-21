@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -170,6 +170,14 @@ independently configured:
   traffic.
 * **Active / Paused** — pause a feed without losing its configuration or
   deleting the News items it already created.
+* **Auto-Publish New Items** and **Auto-Apply Updates to Published Items**
+  — both off by default; see "Deduplication and re-imports" below. Each
+  can only be turned on by a user who already holds
+  `publish_teatatu_news_items` / `edit_published_teatatu_news_items`
+  respectively (Administrator/Editor by default) — having
+  `manage_teatatu_news_rss_feeds` alone is not enough to enable either, so
+  configuring feeds never grants more publishing power than the
+  configuring user already has.
 * **Default Source** and **Default Category** — assigned to every News item
   the feed creates.
 * **Content Mapping** for Title, Excerpt, and Image URL, each independently
@@ -188,15 +196,24 @@ A feed item is identified by its own article URL (used as both the dedupe
 key and the News item's Read More URL):
 
 * **New URL** → a new News item is created as a `draft`, same as every other
-  News item — a human still reviews and publishes it.
+  News item — a human still reviews and publishes it. If the feed has
+  **Auto-Publish New Items** turned on, it's created already `publish`ed
+  instead, with no review step.
 * **Same URL, existing item still unreviewed** (draft/pending) → that item's
   Title/Excerpt/Image are refreshed in place to match the feed's current
-  content.
-* **Same URL, existing item already published** → the live post is left
-  untouched. The freshly-fetched fields are stashed as a pending update and
-  surfaced on the News tab as **"RSS update available"** with **Apply** /
-  **Dismiss** actions — nothing about a published item ever changes without
-  a human explicitly clicking Apply.
+  content, regardless of either toggle (nothing has been reviewed yet, so
+  there's nothing to protect).
+* **Same URL, existing item already published** → by default, the live
+  post is left untouched. The freshly-fetched fields are stashed as a
+  pending update and surfaced on the News tab as **"RSS update
+  available"** with **Apply** / **Dismiss** actions — nothing about a
+  published item changes without a human explicitly clicking Apply. If the
+  feed has **Auto-Apply Updates to Published Items** turned on, the change
+  is written straight to the live post instead of waiting for Apply.
+
+Both toggles are opt-in and off by default — every feed keeps the
+draft-first, human-reviewed behavior above unless you deliberately turn one
+on for a feed you trust.
 
 Deleting a feed's configuration only removes that configuration; News items
 it already created are left exactly as they are.
@@ -232,6 +249,16 @@ Source/Category term, on every site in the network. Since images are
 link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.4.0 =
+* Added two per-feed RSS toggles, both off by default: "Auto-Publish New
+  Items" (new items publish immediately instead of saving as draft) and
+  "Auto-Apply Updates to Published Items" (changes to an already-published
+  item apply immediately instead of becoming a pending update). Each can
+  only be enabled by a user who already holds
+  `publish_teatatu_news_items` / `edit_published_teatatu_news_items`
+  respectively — configuring feeds alone is never enough to enable either.
+  Feeds with either toggle on are flagged in the RSS Feeds list.
 
 = 1.3.0 =
 * Added a "Shortcodes" tab to the Teatatu News admin page: an in-admin

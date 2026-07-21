@@ -142,6 +142,25 @@ function teatatu_news_render_rss_feeds_tab() {
 					<p class="description"><?php esc_html_e( 'Uncheck to pause this feed without deleting its configuration.', 'teatatu-news' ); ?></p>
 				</td>
 			</tr>
+			<?php if ( current_user_can( 'publish_teatatu_news_items' ) || current_user_can( 'edit_published_teatatu_news_items' ) ) : ?>
+				<tr>
+					<th><?php esc_html_e( 'Publishing Behavior', 'teatatu-news' ); ?></th>
+					<td>
+						<?php if ( current_user_can( 'publish_teatatu_news_items' ) ) : ?>
+							<?php $auto_publish = isset( $stashed['auto_publish'] ) ? (bool) $stashed['auto_publish'] : ( $editing ? (bool) get_post_meta( $editing_id, '_teatatu_news_rss_auto_publish', true ) : false ); ?>
+							<label><input type="checkbox" name="auto_publish" value="1" <?php checked( $auto_publish ); ?> /> <?php esc_html_e( 'Auto-publish new items', 'teatatu-news' ); ?></label>
+							<p class="description"><?php esc_html_e( 'Off by default: new items are saved as Draft for review, same as everywhere else in this plugin. Turning this on publishes items from this feed immediately, with no human review — only enable it for a feed you fully trust.', 'teatatu-news' ); ?></p>
+						<?php endif; ?>
+						<?php if ( current_user_can( 'edit_published_teatatu_news_items' ) ) : ?>
+							<?php $auto_apply = isset( $stashed['auto_apply_updates'] ) ? (bool) $stashed['auto_apply_updates'] : ( $editing ? (bool) get_post_meta( $editing_id, '_teatatu_news_rss_auto_apply_updates', true ) : false ); ?>
+							<p style="margin-top:12px;">
+								<label><input type="checkbox" name="auto_apply_updates" value="1" <?php checked( $auto_apply ); ?> /> <?php esc_html_e( 'Auto-apply updates to published items', 'teatatu-news' ); ?></label>
+							</p>
+							<p class="description"><?php esc_html_e( 'Off by default: if this feed later shows changed content for an item that has already been published, the change is held as a pending update for a human to review and apply. Turning this on applies changes to published items immediately instead.', 'teatatu-news' ); ?></p>
+						<?php endif; ?>
+					</td>
+				</tr>
+			<?php endif; ?>
 			<tr>
 				<th><label for="tn_rss_default_source"><?php esc_html_e( 'Default Source', 'teatatu-news' ); ?></label></th>
 				<td>
@@ -266,6 +285,8 @@ function teatatu_news_render_rss_feeds_tab() {
 				$cadence      = (int) get_post_meta( $feed->ID, '_teatatu_news_rss_cadence', true );
 				$last_checked = (int) get_post_meta( $feed->ID, '_teatatu_news_rss_last_checked', true );
 				$last_error   = get_post_meta( $feed->ID, '_teatatu_news_rss_last_error', true );
+				$auto_publish = (bool) get_post_meta( $feed->ID, '_teatatu_news_rss_auto_publish', true );
+				$auto_apply   = (bool) get_post_meta( $feed->ID, '_teatatu_news_rss_auto_apply_updates', true );
 				$edit_url     = add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'rss', 'edit' => $feed->ID ), admin_url( 'admin.php' ) );
 				$toggle_url   = wp_nonce_url( add_query_arg( array( 'action' => 'teatatu_news_toggle_rss_feed', 'feed_id' => $feed->ID ), admin_url( 'admin-post.php' ) ), 'teatatu_news_toggle_rss_feed_' . $feed->ID );
 				$check_url    = wp_nonce_url( add_query_arg( array( 'action' => 'teatatu_news_check_rss_feed_now', 'feed_id' => $feed->ID ), admin_url( 'admin-post.php' ) ), 'teatatu_news_check_rss_feed_now_' . $feed->ID );
@@ -282,6 +303,12 @@ function teatatu_news_render_rss_feeds_tab() {
 					</td>
 					<td>
 						<?php echo $active ? esc_html__( 'Active', 'teatatu-news' ) : esc_html__( 'Paused', 'teatatu-news' ); ?>
+						<?php if ( $auto_publish ) : ?>
+							<br /><span style="color:#d63638;"><?php esc_html_e( 'Auto-publish on', 'teatatu-news' ); ?></span>
+						<?php endif; ?>
+						<?php if ( $auto_apply ) : ?>
+							<br /><span style="color:#d63638;"><?php esc_html_e( 'Auto-apply updates on', 'teatatu-news' ); ?></span>
+						<?php endif; ?>
 						<?php if ( $last_error ) : ?>
 							<br /><span style="color:#d63638;"><?php echo esc_html( $last_error ); ?></span>
 						<?php endif; ?>
@@ -370,6 +397,19 @@ function teatatu_news_handle_save_rss_feed() {
 	update_post_meta( $feed_id, '_teatatu_news_rss_active', $active ? 1 : 0 );
 	update_post_meta( $feed_id, '_teatatu_news_rss_default_source', $default_source );
 	update_post_meta( $feed_id, '_teatatu_news_rss_default_category', $default_category );
+
+	// These two toggles are only ever written when the *current* user holds
+	// the matching real content capability — not just manage_teatatu_news_rss_feeds
+	// — so a role that can configure feeds but not publish/edit-published
+	// content can never grant itself that ability indirectly through a feed
+	// setting. If the field wasn't submitted (because the user can't see
+	// it), the existing stored value is left untouched rather than reset.
+	if ( current_user_can( 'publish_teatatu_news_items' ) ) {
+		update_post_meta( $feed_id, '_teatatu_news_rss_auto_publish', ! empty( $_POST['auto_publish'] ) ? 1 : 0 );
+	}
+	if ( current_user_can( 'edit_published_teatatu_news_items' ) ) {
+		update_post_meta( $feed_id, '_teatatu_news_rss_auto_apply_updates', ! empty( $_POST['auto_apply_updates'] ) ? 1 : 0 );
+	}
 
 	$field_map = teatatu_news_rss_default_field_map();
 	foreach ( array_keys( $field_map ) as $field_key ) {

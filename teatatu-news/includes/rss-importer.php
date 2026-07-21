@@ -3,11 +3,21 @@
  * RSS import engine: a recurring WP-Cron tick checks each active feed
  * against its own configured cadence, fetches it with fetch_feed() (core
  * SimplePie wrapper — no bundled library), and for every item either
- * creates a new draft News post (new URL), keeps an unreviewed draft in
- * sync (same URL, not yet published), or — if the matching post has since
- * been published — stashes the freshly-fetched fields as a pending update
- * on that same post for a human to review and apply. Nothing is ever
- * written to a published post automatically.
+ * creates a new News post (new URL), keeps an unreviewed draft in sync
+ * (same URL, not yet published), or — if the matching post has since been
+ * published — either applies the freshly-fetched fields directly or stashes
+ * them as a pending update for a human to review, depending on that feed's
+ * own settings.
+ *
+ * Draft-first and human-gated re-imports remain the default for every feed
+ * (new items become `draft`; published items only ever get a pending
+ * update). Each feed can independently opt into "Auto-Publish New Items"
+ * and/or "Auto-Apply Updates to Published Items" — see
+ * includes/rss-feeds.php — but only a user who already holds
+ * publish_teatatu_news_items / edit_published_teatatu_news_items can turn
+ * those on for a given feed, so the underlying capability boundary is
+ * unchanged; what's opt-in is skipping the *review step* for feeds a human
+ * with real publish rights has explicitly decided to trust.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -127,15 +137,17 @@ function teatatu_news_rss_process_feed( $feed_id ) {
 	}
 	update_post_meta( $feed_id, '_teatatu_news_rss_last_error', '' );
 
-	$field_map        = teatatu_news_rss_get_field_map( $feed_id );
+	$field_map         = teatatu_news_rss_get_field_map( $feed_id );
 	$default_source    = (int) get_post_meta( $feed_id, '_teatatu_news_rss_default_source', true );
 	$default_category  = (int) get_post_meta( $feed_id, '_teatatu_news_rss_default_category', true );
+	$auto_publish      = (bool) get_post_meta( $feed_id, '_teatatu_news_rss_auto_publish', true );
+	$auto_apply_update = (bool) get_post_meta( $feed_id, '_teatatu_news_rss_auto_apply_updates', true );
 
 	$items           = $feed->get_items( 0, TEATATU_NEWS_RSS_MAX_ITEMS_PER_FEED );
 	$page_html_cache = array();
 
 	foreach ( $items as $item ) {
-		teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_source, $default_category, $page_html_cache );
+		teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_source, $default_category, $auto_publish, $auto_apply_update, $page_html_cache );
 	}
 }
 
@@ -147,9 +159,11 @@ function teatatu_news_rss_process_feed( $feed_id ) {
  * @param array           $field_map         Per-field mapping config.
  * @param int             $default_source    Default Source term ID, or 0.
  * @param int             $default_category  Default Category term ID, or 0.
+ * @param bool            $auto_publish      Whether new items from this feed publish immediately instead of saving as draft.
+ * @param bool            $auto_apply_update Whether changes to an already-published item apply immediately instead of becoming a pending update.
  * @param array           $page_html_cache   Reference to a per-run cache of fetched article pages, keyed by URL.
  */
-function teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_source, $default_category, &$page_html_cache ) {
+function teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_source, $default_category, $auto_publish, $auto_apply_update, &$page_html_cache ) {
 	$link = $item->get_permalink();
 	if ( ! $link ) {
 		return;
@@ -179,7 +193,7 @@ function teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_sou
 	$existing_id = teatatu_news_rss_find_existing_post( $feed_id, $link );
 
 	if ( ! $existing_id ) {
-		teatatu_news_rss_create_post( $feed_id, $link, $title, $excerpt, $image, $default_source, $default_category );
+		teatatu_news_rss_create_post( $feed_id, $link, $title, $excerpt, $image, $default_source, $default_category, $auto_publish );
 		return;
 	}
 
@@ -196,11 +210,12 @@ function teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_sou
 		return;
 	}
 
-	teatatu_news_rss_maybe_flag_pending_update( $existing_id, $title, $excerpt, $image );
+	teatatu_news_rss_maybe_flag_pending_update( $existing_id, $title, $excerpt, $image, $auto_apply_update );
 }
 
 /**
- * Creates a new draft News post for a not-yet-seen feed item.
+ * Creates a new News post for a not-yet-seen feed item — as a draft by
+ * default, or published immediately if the feed has Auto-Publish enabled.
  *
  * @param int    $feed_id          RSS Feed post ID.
  * @param string $link             Article URL (also the dedupe key).
@@ -209,14 +224,15 @@ function teatatu_news_rss_import_item( $feed_id, $item, $field_map, $default_sou
  * @param string $image            Resolved image URL.
  * @param int    $default_source   Default Source term ID, or 0.
  * @param int    $default_category Default Category term ID, or 0.
+ * @param bool   $auto_publish     Whether to publish immediately instead of saving as draft.
  */
-function teatatu_news_rss_create_post( $feed_id, $link, $title, $excerpt, $image, $default_source, $default_category ) {
+function teatatu_news_rss_create_post( $feed_id, $link, $title, $excerpt, $image, $default_source, $default_category, $auto_publish ) {
 	$new_id = wp_insert_post(
 		array(
 			'post_type'    => 'teatatu_news',
 			'post_title'   => $title,
 			'post_excerpt' => $excerpt,
-			'post_status'  => 'draft',
+			'post_status'  => $auto_publish ? 'publish' : 'draft',
 		),
 		true
 	);
@@ -238,14 +254,16 @@ function teatatu_news_rss_create_post( $feed_id, $link, $title, $excerpt, $image
 
 /**
  * Stashes freshly-fetched field values as a pending update on an already
- * published post, but only if something actually changed.
+ * published post — or, if the feed has Auto-Apply Updates enabled, applies
+ * them immediately instead — but only if something actually changed.
  *
- * @param int    $post_id Existing, published News post ID.
- * @param string $title   Resolved title.
- * @param string $excerpt Resolved excerpt.
- * @param string $image   Resolved image URL.
+ * @param int    $post_id     Existing, published News post ID.
+ * @param string $title       Resolved title.
+ * @param string $excerpt     Resolved excerpt.
+ * @param string $image       Resolved image URL.
+ * @param bool   $auto_apply  Whether to apply immediately instead of stashing a pending update.
  */
-function teatatu_news_rss_maybe_flag_pending_update( $post_id, $title, $excerpt, $image ) {
+function teatatu_news_rss_maybe_flag_pending_update( $post_id, $title, $excerpt, $image, $auto_apply ) {
 	// Raw context on both sides: get_the_title()/the display context of
 	// get_post_field() run values through filters like wptexturize(), which
 	// would make an unchanged title/excerpt spuriously compare as different.
@@ -254,6 +272,12 @@ function teatatu_news_rss_maybe_flag_pending_update( $post_id, $title, $excerpt,
 	$current_image   = get_post_meta( $post_id, '_teatatu_news_image_url', true );
 
 	if ( $title === $current_title && $excerpt === $current_excerpt && $image === $current_image ) {
+		return;
+	}
+
+	if ( $auto_apply ) {
+		teatatu_news_rss_apply_fields_to_post( $post_id, $title, $excerpt, $image );
+		delete_post_meta( $post_id, '_teatatu_news_rss_pending_update' );
 		return;
 	}
 
@@ -267,6 +291,28 @@ function teatatu_news_rss_maybe_flag_pending_update( $post_id, $title, $excerpt,
 			'detected_at' => time(),
 		)
 	);
+}
+
+/**
+ * Writes resolved Title/Excerpt/Image values directly onto an existing
+ * post. Shared by the auto-apply path above and the manual "Apply" admin
+ * action, so both take the exact same effect.
+ *
+ * @param int    $post_id Post ID.
+ * @param string $title   Title.
+ * @param string $excerpt Excerpt.
+ * @param string $image   Image URL.
+ */
+function teatatu_news_rss_apply_fields_to_post( $post_id, $title, $excerpt, $image ) {
+	wp_update_post(
+		array(
+			'ID'           => $post_id,
+			'post_title'   => $title,
+			'post_excerpt' => $excerpt,
+		),
+		true
+	);
+	update_post_meta( $post_id, '_teatatu_news_image_url', $image );
 }
 
 /**
@@ -560,15 +606,7 @@ function teatatu_news_handle_apply_rss_update() {
 
 	$pending = get_post_meta( $post_id, '_teatatu_news_rss_pending_update', true );
 	if ( is_array( $pending ) ) {
-		wp_update_post(
-			array(
-				'ID'           => $post_id,
-				'post_title'   => $pending['title'],
-				'post_excerpt' => $pending['excerpt'],
-			),
-			true
-		);
-		update_post_meta( $post_id, '_teatatu_news_image_url', $pending['image_url'] );
+		teatatu_news_rss_apply_fields_to_post( $post_id, $pending['title'], $pending['excerpt'], $pending['image_url'] );
 		delete_post_meta( $post_id, '_teatatu_news_rss_pending_update' );
 	}
 

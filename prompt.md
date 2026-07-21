@@ -128,19 +128,46 @@ Preserve these invariants unless the change explicitly asks to alter them:
    core update filters (pre_set_site_transient_update_plugins,
    plugins_api, upgrader_source_selection) — no bundled update library.
 
-9. RSS import stays draft-first and human-gated, mirroring the agent
-   capability model in point 3 even though it isn't the REST agent path:
-   - A new feed item (new article URL) always becomes a `draft`
-     teatatu_news post — same as every other creation path in this plugin.
-     Never auto-publish.
+9. RSS import is draft-first and human-gated *by default*, with two
+   explicit, per-feed, off-by-default opt-outs — this was a deliberate,
+   user-requested reversal of an earlier stricter invariant ("never
+   auto-publish, ever"); the capability boundary is what's non-negotiable
+   now, not the draft-first behavior itself:
+   - Default behavior, unchanged: a new feed item (new article URL)
+     becomes a `draft` teatatu_news post, and a change to an
+     already-published item becomes a `_teatatu_news_rss_pending_update`
+     for a human to Apply/Dismiss via the News tab.
+   - `_teatatu_news_rss_auto_publish` (per feed, postmeta on the
+     teatatu_news_rssfeed post): when true, teatatu_news_rss_create_post()
+     sets `post_status` to `publish` instead of `draft` for new items from
+     that feed only. Read in teatatu_news_rss_process_feed() and threaded
+     through teatatu_news_rss_import_item().
+   - `_teatatu_news_rss_auto_apply_updates` (per feed): when true,
+     teatatu_news_rss_maybe_flag_pending_update() calls
+     teatatu_news_rss_apply_fields_to_post() directly instead of stashing
+     a pending update, for that feed's already-published items only.
+     teatatu_news_rss_apply_fields_to_post() is shared with the manual
+     "Apply" admin-post.php handler — same effect either way, keep it that
+     way rather than duplicating the update logic.
    - If the matching post is still unpublished (draft/pending), the
-     importer may update it in place freely — nothing has been reviewed
-     yet, so there's nothing to protect.
-   - The instant a matching post is `publish`, the importer must NEVER
-     write to it directly. Freshly-fetched values go into
-     `_teatatu_news_rss_pending_update` postmeta only; a human applies or
-     dismisses via the News tab. Don't add a "trust the feed, auto-apply"
-     mode — that's the whole point of this design.
+     importer keeps updating it in place freely regardless of either
+     toggle — nothing has been reviewed yet, so there's nothing to
+     protect. Neither toggle ever changes an *existing* draft's status;
+     auto_publish only affects the status assigned at creation time.
+   - The capability boundary that must never move: `manage_teatatu_news_rss_feeds`
+     alone is not sufficient to turn either toggle on. Writing
+     `_teatatu_news_rss_auto_publish` requires the saving user to also
+     hold `publish_teatatu_news_items`; writing
+     `_teatatu_news_rss_auto_apply_updates` requires
+     `edit_published_teatatu_news_items` (see the two separate
+     current_user_can() gates around each update_post_meta() call in
+     teatatu_news_handle_save_rss_feed(), and the matching visibility
+     gates in the form). If a user can't see/change one of these fields,
+     the save handler leaves the existing stored value untouched rather
+     than resetting it — don't change that to "unchecked box = force off",
+     it would let a lower-privileged edit silently downgrade a setting a
+     higher-privileged user deliberately turned on. Never let
+     manage_teatatu_news_rss_feeds by itself grant publishing power.
    - `manage_teatatu_news_rss_feeds` (feed configuration: URL, cadence,
      mapping) is granted to Administrator/Editor only, never to
      teatatu_news_agent — configuring automated imports is a
@@ -203,9 +230,13 @@ Preserve these invariants unless the change explicitly asks to alter them:
       other goes stale silently since nothing enforces they match.
 
 Ask before changing: the capability boundaries in point 3, the
-no-custom-tables constraint in point 1, or the draft-first/human-gated
-re-import behavior in point 9 — those are deliberate product decisions,
-not implementation details.
+no-custom-tables constraint in point 1, the off-by-default state of
+_teatatu_news_rss_auto_publish/_teatatu_news_rss_auto_apply_updates, or
+the current_user_can() gating around who can turn either on (point 9) —
+those are deliberate product decisions, not implementation details. The
+existence of the two toggles themselves is not up for debate; it was a
+direct, explicit user request — don't revert to the old hard "never
+auto-publish" rule on your own judgment.
 ```
 
 ---

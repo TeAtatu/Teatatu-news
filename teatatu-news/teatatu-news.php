@@ -3,7 +3,7 @@
  * Plugin Name: Teatatu News
  * Plugin URI: https://github.com/TeAtatu/Teatatu-news
  * Description: Aggregates news items into a custom "News" post type, with Source/Category taxonomies, an RSS feed importer, link-only image handling (no local downloads), REST API access for AI agents, and per-site or network-wide shortcodes. Uses only standard WordPress database tables.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author: TeAtatu
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TEATATU_NEWS_VERSION', '1.3.0' );
+define( 'TEATATU_NEWS_VERSION', '1.4.0' );
 define( 'TEATATU_NEWS_FILE', __FILE__ );
 define( 'TEATATU_NEWS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TEATATU_NEWS_URL', plugin_dir_url( __FILE__ ) );
