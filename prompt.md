@@ -64,6 +64,23 @@ Preserve these invariants unless the change explicitly asks to alter them:
    - Non-multisite installs must keep working via the same code paths,
      just running once against the current site
      (see teatatu_news_get_option() / is_multisite() branches).
+   - Admin-post.php form handlers ALWAYS post to the plain
+     admin_url( 'admin-post.php' ) — never network_admin_url( 'admin-post.php' ).
+     WordPress core has no wp-admin/network/admin-post.php file at all (verified
+     directly against core's file listing); that URL 404s. This was a real,
+     confirmed bug: the Master Site setting in includes/settings.php used
+     network_admin_url('admin-post.php') for its form action, so every
+     save silently 404'd and nothing ever reached teatatu_news_handle_save_settings()
+     — "Master Site can be selected but never actually saves." The plain
+     admin-post.php works identically from a Network Admin-rendered page
+     (Network Admin only ever runs on the network's main site anyway), and
+     every other form in this plugin (News items, Sources/Categories, RSS
+     Feeds) already used it successfully — rely on current_user_can() inside
+     the handler for the actual permission boundary, not which URL variant
+     was used to reach it. (network_admin_url('settings.php') for a
+     *redirect* target, by contrast, is fine and correct — settings.php
+     genuinely exists under wp-admin/network/ — this gotcha is specific to
+     admin-post.php.)
 
 5. Images are link-only. This was a deliberate reversal of an earlier
    design (v1.0.0 originally sideloaded images into the Media Library via
@@ -150,10 +167,88 @@ Preserve these invariants unless the change explicitly asks to alter them:
      "Apply" admin-post.php handler — same effect either way, keep it that
      way rather than duplicating the update logic.
    - If the matching post is still unpublished (draft/pending), the
-     importer keeps updating it in place freely regardless of either
-     toggle — nothing has been reviewed yet, so there's nothing to
-     protect. Neither toggle ever changes an *existing* draft's status;
-     auto_publish only affects the status assigned at creation time.
+     importer keeps updating its Title/Excerpt/Image in place regardless of
+     either toggle — nothing has been reviewed yet, so there's nothing to
+     protect. This branch (in teatatu_news_rss_import_item(), the
+     `'publish' !== get_post_status( $existing_id )` case) ALSO promotes
+     the item to `publish` when auto_publish is true — not just brand new
+     items. This was a real bug (fixed): auto_publish originally only
+     applied in teatatu_news_rss_create_post(), so any item already
+     imported once (as draft) before the toggle was turned on stayed a
+     draft forever, since it would never be treated as "new" again on
+     later syncs. The toggle's promise is "every item from this feed ends
+     up published" — not just ones lucky enough to be new at the exact
+     moment the toggle happened to already be on — so re-check this branch
+     if auto_publish ever seems to stop working again; it's the most
+     likely place a similar regression would hide.
+   - Each item's original publish date (RSS `pubDate` / Atom `published`,
+     by default; see the field-mapping bullet below for the option to
+     source it elsewhere) is applied via the shared
+     teatatu_news_rss_apply_pub_date() helper, which sets both
+     `post_date`/`post_date_gmt` (so News Items and every shortcode's
+     already-default `orderby=date&order=DESC` sort correctly by it with
+     no other code changes needed) and `_teatatu_news_rss_pub_date`
+     postmeta (an explicit, auditable copy). Threaded through every write
+     path: create, unpublished-resync, auto-apply, and the pending-update
+     array (`pub_date_gmt` key — guard with `isset()` when reading it back,
+     since pending updates stashed before this existed won't have the
+     key). Only applies going forward; an item imported before this
+     existed keeps its original import-time post_date until it's next
+     touched by one of those paths.
+   - Content mapping covers five fields, all resolved through
+     `$field_map` (an array keyed `title`/`excerpt`/`image`/
+     `read_more_url`/`pub_date`, each value a `source`/`tag`/`attr_type`/
+     `attr_value` tuple — see teatatu_news_rss_default_field_map() and
+     teatatu_news_rss_field_source_options() in includes/rss-feeds.php).
+     Each field has its own resolver in includes/rss-importer.php
+     (teatatu_news_rss_resolve_text_field(),
+     teatatu_news_rss_resolve_image_field(),
+     teatatu_news_rss_resolve_read_more_url(),
+     teatatu_news_rss_resolve_pub_date_field()) and its own "whole-value"
+     default source that needs no selector — `rss_title`/
+     `rss_description` for text, `rss_image` (enclosure/media) for image,
+     `rss_link` (SimplePie's own permalink) for Read More URL,
+     `rss_pub_date` (teatatu_news_rss_get_item_pub_date_gmt(), SimplePie's
+     get_date() — safe to treat as GMT directly since WordPress forces
+     PHP's default timezone to UTC) for Publish Date. Any other source
+     (rss_description/rss_content/page, or the corresponding item field
+     for Read More URL/Publish Date) requires a tag + class/id selector;
+     if one isn't set, the resolver falls back to the field's own default
+     rather than returning empty — Read More URL falls back to the feed's
+     real item link, Publish Date falls back to empty (which means "keep
+     whatever post_date already applies," not the current time). Adding a
+     sixth mappable field means adding it to all three of
+     teatatu_news_rss_default_field_map(),
+     teatatu_news_rss_field_source_options(), and the `$field_labels`
+     array in teatatu_news_render_rss_feeds_tab() — they're intentionally
+     kept in sync by hand, not generated from one list.
+   - The RSS Feeds tab's "Preview Example Values" button
+     (teatatu_news_ajax_preview_rss_mapping(), a wp_ajax_ handler in
+     includes/rss-importer.php, capability-gated on
+     manage_teatatu_news_rss_feeds and nonce-checked against
+     'teatatu_news_rss_preview_mapping') fetches the feed's most recent
+     item and resolves it through the exact same
+     teatatu_news_rss_resolve_*() functions the real import path calls —
+     it does not have (and must never grow) its own parallel resolution
+     logic, or the preview could show something an actual import
+     wouldn't produce. It reads the mapping straight from the unsaved
+     form via teatatu_news_rss_sanitize_field_map_from_request()
+     (includes/rss-feeds.php), sanitized identically to what Save does —
+     shared with teatatu_news_handle_save_rss_feed() rather than
+     duplicated, so preview and save can never silently disagree about
+     what a given form submission means.
+   - Read More URL is mappable independently of deduplication — remapping
+     it to scrape a different link out of the article must never change
+     which existing post an incoming item matches against. This is why
+     teatatu_news_rss_create_post() writes a separate, never-remapped
+     `_teatatu_news_rss_source_link` postmeta (always the feed item's own
+     permalink, never the mapped/displayed Read More URL) and
+     teatatu_news_rss_find_existing_post() matches on that field, with an
+     OR-fallback to `_teatatu_news_read_more_url` for posts imported
+     before `_teatatu_news_rss_source_link` existed. Don't collapse these
+     back into one field — doing so would make changing the Read More URL
+     mapping silently break dedupe (either creating duplicate posts or
+     stalling updates) for every feed using it.
    - The capability boundary that must never move: `manage_teatatu_news_rss_feeds`
      alone is not sufficient to turn either toggle on. Writing
      `_teatatu_news_rss_auto_publish` requires the saving user to also
@@ -259,7 +354,7 @@ auto-publish" rule on your own judgment.
 | `includes/shortcodes.php` | Per-site + network shortcodes, shared renderer, shared aggregation/cache function |
 | `includes/updater.php` | GitHub-release-based self-hosted auto-updater |
 | `includes/rss-feeds.php` | `teatatu_news_rssfeed` CPT (admin-only, no native UI, never in REST), "RSS Feeds" tab + CRUD |
-| `includes/rss-importer.php` | Cron scheduling/tick, fetch_feed(), DOM element/class/id extraction, dedupe + create/update/pending-update logic, Apply/Dismiss handlers |
+| `includes/rss-importer.php` | Cron scheduling/tick, fetch_feed(), DOM element/class/id extraction, dedupe + create/update/pending-update logic (incl. auto-publish/auto-apply and pub-date handling), Apply/Dismiss handlers |
 | `uninstall.php` | Retention-aware cleanup, run standalone (main plugin file not loaded) |
 
 ## Original build spec

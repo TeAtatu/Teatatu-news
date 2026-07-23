@@ -50,29 +50,41 @@ function teatatu_news_rss_default_field_map() {
 		'attr_value' => '',
 	);
 	return array(
-		'title'   => array_merge( $blank, array( 'source' => 'rss_title' ) ),
-		'excerpt' => array_merge( $blank, array( 'source' => 'rss_description' ) ),
-		'image'   => array_merge( $blank, array( 'source' => 'rss_image' ) ),
+		'title'         => array_merge( $blank, array( 'source' => 'rss_title' ) ),
+		'excerpt'       => array_merge( $blank, array( 'source' => 'rss_description' ) ),
+		'image'         => array_merge( $blank, array( 'source' => 'rss_image' ) ),
+		'read_more_url' => array_merge( $blank, array( 'source' => 'rss_link' ) ),
+		'pub_date'      => array_merge( $blank, array( 'source' => 'rss_pub_date' ) ),
 	);
 }
 
 /**
  * The selectable content sources for a given News field.
  *
- * @param string $field 'title', 'excerpt', or 'image'.
+ * @param string $field 'title', 'excerpt', 'image', 'read_more_url', or 'pub_date'.
  * @return array<string,string> value => label
  */
 function teatatu_news_rss_field_source_options( $field ) {
-	$options = array(
+	$content_sources = array(
 		'rss_title'       => __( 'RSS: Title', 'teatatu-news' ),
 		'rss_description' => __( 'RSS: Description', 'teatatu-news' ),
 		'rss_content'     => __( 'RSS: Full Content (content:encoded)', 'teatatu-news' ),
 		'page'            => __( 'Article Page (fetch the linked URL and scrape it)', 'teatatu-news' ),
 	);
+
 	if ( 'image' === $field ) {
-		$options = array( 'rss_image' => __( 'RSS: Enclosure / Media Image', 'teatatu-news' ) ) + $options;
+		return array( 'rss_image' => __( 'RSS: Enclosure / Media Image', 'teatatu-news' ) ) + $content_sources;
 	}
-	return $options;
+
+	if ( 'read_more_url' === $field ) {
+		return array( 'rss_link' => __( 'RSS: Item Link (default)', 'teatatu-news' ) ) + $content_sources;
+	}
+
+	if ( 'pub_date' === $field ) {
+		return array( 'rss_pub_date' => __( 'RSS: Publish Date (default)', 'teatatu-news' ) ) + $content_sources;
+	}
+
+	return $content_sources; // title, excerpt.
 }
 
 /**
@@ -93,6 +105,39 @@ function teatatu_news_rss_get_field_map( $feed_id ) {
 		}
 	}
 	return $default;
+}
+
+/**
+ * Reads and sanitizes a full field-mapping config directly from $_POST —
+ * the same map_{field}_source/tag/attr_type/attr_value inputs the Content
+ * Mapping table submits. Shared by the Save handler and the mapping
+ * preview AJAX handler (teatatu_news_ajax_preview_rss_mapping(), in
+ * includes/rss-importer.php) so both interpret unsaved form input
+ * identically — the preview must sanitize exactly the way Save will, or
+ * it could show an example for a mapping that Save would silently reject.
+ *
+ * @return array
+ */
+function teatatu_news_rss_sanitize_field_map_from_request() {
+	$field_map = teatatu_news_rss_default_field_map();
+	foreach ( array_keys( $field_map ) as $field_key ) {
+		$allowed_sources = array_keys( teatatu_news_rss_field_source_options( $field_key ) );
+		$source          = isset( $_POST[ 'map_' . $field_key . '_source' ] ) ? sanitize_key( wp_unslash( $_POST[ 'map_' . $field_key . '_source' ] ) ) : $field_map[ $field_key ]['source'];
+		if ( ! in_array( $source, $allowed_sources, true ) ) {
+			$source = $field_map[ $field_key ]['source'];
+		}
+		$tag        = isset( $_POST[ 'map_' . $field_key . '_tag' ] ) ? preg_replace( '/[^a-z0-9]/', '', strtolower( sanitize_text_field( wp_unslash( $_POST[ 'map_' . $field_key . '_tag' ] ) ) ) ) : '';
+		$attr_type  = ( isset( $_POST[ 'map_' . $field_key . '_attr_type' ] ) && 'id' === $_POST[ 'map_' . $field_key . '_attr_type' ] ) ? 'id' : 'class';
+		$attr_value = isset( $_POST[ 'map_' . $field_key . '_attr_value' ] ) ? sanitize_html_class( wp_unslash( $_POST[ 'map_' . $field_key . '_attr_value' ] ) ) : '';
+
+		$field_map[ $field_key ] = array(
+			'source'     => $source,
+			'tag'        => $tag,
+			'attr_type'  => $attr_type,
+			'attr_value' => $attr_value,
+		);
+	}
+	return $field_map;
 }
 
 // -----------------------------------------------------------------------
@@ -201,22 +246,39 @@ function teatatu_news_render_rss_feeds_tab() {
 		</table>
 
 		<h3><?php esc_html_e( 'Content Mapping', 'teatatu-news' ); ?></h3>
-		<p class="description"><?php esc_html_e( 'For each News field, choose where its content comes from. Optionally narrow to one HTML element by tag and class/id — useful when a source field contains more than you want. All formatting except links is stripped from mapped Title/Excerpt content. "Article Page" requires a tag and/or class/id — without one, that field is left empty rather than filling it with the entire page.', 'teatatu-news' ); ?></p>
-		<table class="wp-list-table widefat fixed striped">
+		<p><?php esc_html_e( 'For each field below, choose a Source, then optionally narrow it to one HTML element by Element (tag) and/or Class or ID — useful when a source contains more than just the part you want.', 'teatatu-news' ); ?></p>
+		<ul style="list-style:disc;margin:0 0 1em 20px;">
+			<li><?php esc_html_e( 'An "RSS: ..." source reads directly from the feed item itself. Leave Element and Class/ID blank to use that source\'s whole value as-is — e.g. the whole Description field. Add a tag and/or class/id to pull out just one part of it instead — e.g. a <div class="summary"> inside Full Content.', 'teatatu-news' ); ?></li>
+			<li><?php esc_html_e( '"Article Page" fetches the article\'s own linked page and scrapes it. This always requires an Element and/or Class/ID — without one, the field is left unresolved rather than filled with the entire page.', 'teatatu-news' ); ?></li>
+			<li><?php esc_html_e( 'If a field can\'t be resolved at all, it falls back safely: Title left unresolved means the item is skipped entirely (nothing is created); Excerpt and Image URL are simply left blank; Read More URL falls back to the feed\'s own article link; Publish Date falls back to the time the item was imported.', 'teatatu-news' ); ?></li>
+			<li><?php esc_html_e( 'Read More URL mapping only changes what is displayed to readers. Whether an item is new or already imported is always determined by the feed\'s own original article link internally, never by this mapping — so remapping Read More URL is safe and will never create duplicate imports.', 'teatatu-news' ); ?></li>
+			<li><?php esc_html_e( 'Publish Date mapped from anything other than "RSS: Publish Date" always requires an Element and/or Class/ID too, since there is no reliable way to find a date inside an unmarked block of text. The selected element\'s datetime="..." attribute is used if present (e.g. a <time datetime="2024-03-01T10:00:00Z"> element), otherwise its visible text is parsed automatically (e.g. "1 March 2024").', 'teatatu-news' ); ?></li>
+			<li><?php esc_html_e( 'All formatting except links is stripped from mapped Excerpt content; Title is always reduced to plain text, as WordPress post titles always are.', 'teatatu-news' ); ?></li>
+		</ul>
+		<p>
+			<button type="button" class="button" id="tn_rss_preview_btn"><?php esc_html_e( 'Preview Example Values', 'teatatu-news' ); ?></button>
+			<span id="tn_rss_preview_status" style="margin-left:8px;font-style:italic;"></span>
+			<br /><span class="description"><?php esc_html_e( 'Fetches this feed\'s most recent item and shows what the mapping above currently produces for it — without saving anything. Update the mapping and preview again to compare.', 'teatatu-news' ); ?></span>
+		</p>
+		<div style="max-width:100%;overflow-x:auto;">
+		<table class="wp-list-table widefat striped" style="table-layout:auto;">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'News Field', 'teatatu-news' ); ?></th>
-					<th><?php esc_html_e( 'Source', 'teatatu-news' ); ?></th>
-					<th><?php esc_html_e( 'Element (optional)', 'teatatu-news' ); ?></th>
-					<th><?php esc_html_e( 'Class or ID (optional)', 'teatatu-news' ); ?></th>
+					<th style="width:1%;white-space:nowrap;"><?php esc_html_e( 'News Field', 'teatatu-news' ); ?></th>
+					<th style="width:1%;white-space:nowrap;"><?php esc_html_e( 'Source', 'teatatu-news' ); ?></th>
+					<th style="width:1%;white-space:nowrap;"><?php esc_html_e( 'Element (optional)', 'teatatu-news' ); ?></th>
+					<th style="width:1%;white-space:nowrap;"><?php esc_html_e( 'Class or ID (optional)', 'teatatu-news' ); ?></th>
+					<th><?php esc_html_e( 'Example (most recent item)', 'teatatu-news' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php
 				$field_labels = array(
-					'title'   => __( 'Title', 'teatatu-news' ),
-					'excerpt' => __( 'Excerpt', 'teatatu-news' ),
-					'image'   => __( 'Image URL', 'teatatu-news' ),
+					'title'         => __( 'Title', 'teatatu-news' ),
+					'excerpt'       => __( 'Excerpt', 'teatatu-news' ),
+					'image'         => __( 'Image URL', 'teatatu-news' ),
+					'read_more_url' => __( 'Read More URL', 'teatatu-news' ),
+					'pub_date'      => __( 'Publish Date', 'teatatu-news' ),
 				);
 				foreach ( $field_labels as $field_key => $field_label ) :
 					$fm = isset( $stashed[ 'map_' . $field_key . '_source' ] )
@@ -229,29 +291,95 @@ function teatatu_news_render_rss_feeds_tab() {
 						: $field_map[ $field_key ];
 					?>
 					<tr>
-						<td><strong><?php echo esc_html( $field_label ); ?></strong></td>
-						<td>
+						<td style="white-space:nowrap;"><strong><?php echo esc_html( $field_label ); ?></strong></td>
+						<td style="white-space:nowrap;">
 							<select name="map_<?php echo esc_attr( $field_key ); ?>_source">
 								<?php foreach ( teatatu_news_rss_field_source_options( $field_key ) as $value => $label ) : ?>
 									<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $fm['source'], $value ); ?>><?php echo esc_html( $label ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</td>
-						<td><input type="text" name="map_<?php echo esc_attr( $field_key ); ?>_tag" value="<?php echo esc_attr( $fm['tag'] ); ?>" placeholder="div" class="small-text" /></td>
-						<td>
-							<select name="map_<?php echo esc_attr( $field_key ); ?>_attr_type" class="small-text">
+						<td style="white-space:nowrap;"><input type="text" name="map_<?php echo esc_attr( $field_key ); ?>_tag" value="<?php echo esc_attr( $fm['tag'] ); ?>" placeholder="div" size="6" /></td>
+						<td style="white-space:nowrap;">
+							<select name="map_<?php echo esc_attr( $field_key ); ?>_attr_type">
 								<option value="class" <?php selected( $fm['attr_type'], 'class' ); ?>><?php esc_html_e( 'Class', 'teatatu-news' ); ?></option>
 								<option value="id" <?php selected( $fm['attr_type'], 'id' ); ?>><?php esc_html_e( 'ID', 'teatatu-news' ); ?></option>
 							</select>
-							<input type="text" name="map_<?php echo esc_attr( $field_key ); ?>_attr_value" value="<?php echo esc_attr( $fm['attr_value'] ); ?>" placeholder="<?php esc_attr_e( 'e.g. article-body', 'teatatu-news' ); ?>" class="regular-text" />
+							<input type="text" name="map_<?php echo esc_attr( $field_key ); ?>_attr_value" value="<?php echo esc_attr( $fm['attr_value'] ); ?>" placeholder="<?php esc_attr_e( 'e.g. article-body', 'teatatu-news' ); ?>" size="18" />
 						</td>
+						<td class="tn-rss-example" data-tn-example="<?php echo esc_attr( $field_key ); ?>" style="white-space:normal;word-break:break-word;min-width:220px;"><em><?php esc_html_e( 'Not previewed yet', 'teatatu-news' ); ?></em></td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
+		</div>
 
 		<?php submit_button( $editing ? __( 'Update RSS Feed', 'teatatu-news' ) : __( 'Add RSS Feed', 'teatatu-news' ) ); ?>
 	</form>
+	<script>
+	( function () {
+		var btn    = document.getElementById( 'tn_rss_preview_btn' );
+		var status = document.getElementById( 'tn_rss_preview_status' );
+		if ( ! btn || ! status ) {
+			return;
+		}
+		btn.addEventListener( 'click', function () {
+			var urlField = document.getElementById( 'tn_rss_url' );
+			var feedUrl  = urlField ? urlField.value.trim() : '';
+			if ( ! feedUrl ) {
+				status.textContent = <?php echo wp_json_encode( __( 'Enter a Feed URL first.', 'teatatu-news' ) ); ?>;
+				return;
+			}
+
+			var data = new FormData();
+			data.append( 'action', 'teatatu_news_rss_preview_mapping' );
+			data.append( 'nonce', <?php echo wp_json_encode( wp_create_nonce( 'teatatu_news_rss_preview_mapping' ) ); ?> );
+			data.append( 'feed_url', feedUrl );
+			document.querySelectorAll( '[name^="map_"]' ).forEach( function ( field ) {
+				data.append( field.name, field.value );
+			} );
+
+			btn.disabled = true;
+			status.textContent = <?php echo wp_json_encode( __( 'Fetching…', 'teatatu-news' ) ); ?>;
+			document.querySelectorAll( '.tn-rss-example' ).forEach( function ( cell ) {
+				cell.innerHTML = '';
+			} );
+
+			fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
+				method: 'POST',
+				credentials: 'same-origin',
+				body: data,
+			} )
+				.then( function ( response ) { return response.json(); } )
+				.then( function ( json ) {
+					btn.disabled = false;
+					if ( ! json || ! json.success ) {
+						status.textContent = ( json && json.data && json.data.message ) ? json.data.message : <?php echo wp_json_encode( __( 'Preview failed.', 'teatatu-news' ) ); ?>;
+						return;
+					}
+					status.textContent = <?php echo wp_json_encode( __( 'Showing the most recent item.', 'teatatu-news' ) ); ?>;
+					Object.keys( json.data ).forEach( function ( field ) {
+						var cell = document.querySelector( '[data-tn-example="' + field + '"]' );
+						if ( ! cell ) {
+							return;
+						}
+						cell.textContent = json.data[ field ];
+						if ( 'image' === field && json.data[ field ] && 0 === json.data[ field ].indexOf( 'http' ) ) {
+							var img = document.createElement( 'img' );
+							img.src = json.data[ field ];
+							img.alt = '';
+							img.style.cssText = 'display:block;max-width:120px;height:auto;margin-top:4px;';
+							cell.appendChild( img );
+						}
+					} );
+				} )
+				.catch( function () {
+					btn.disabled = false;
+					status.textContent = <?php echo wp_json_encode( __( 'Preview failed.', 'teatatu-news' ) ); ?>;
+				} );
+		} );
+	} )();
+	</script>
 
 	<hr />
 	<h2><?php esc_html_e( 'All RSS Feeds', 'teatatu-news' ); ?></h2>
@@ -411,25 +539,7 @@ function teatatu_news_handle_save_rss_feed() {
 		update_post_meta( $feed_id, '_teatatu_news_rss_auto_apply_updates', ! empty( $_POST['auto_apply_updates'] ) ? 1 : 0 );
 	}
 
-	$field_map = teatatu_news_rss_default_field_map();
-	foreach ( array_keys( $field_map ) as $field_key ) {
-		$allowed_sources = array_keys( teatatu_news_rss_field_source_options( $field_key ) );
-		$source          = isset( $_POST[ 'map_' . $field_key . '_source' ] ) ? sanitize_key( wp_unslash( $_POST[ 'map_' . $field_key . '_source' ] ) ) : $field_map[ $field_key ]['source'];
-		if ( ! in_array( $source, $allowed_sources, true ) ) {
-			$source = $field_map[ $field_key ]['source'];
-		}
-		$tag        = isset( $_POST[ 'map_' . $field_key . '_tag' ] ) ? preg_replace( '/[^a-z0-9]/', '', strtolower( sanitize_text_field( wp_unslash( $_POST[ 'map_' . $field_key . '_tag' ] ) ) ) ) : '';
-		$attr_type  = ( isset( $_POST[ 'map_' . $field_key . '_attr_type' ] ) && 'id' === $_POST[ 'map_' . $field_key . '_attr_type' ] ) ? 'id' : 'class';
-		$attr_value = isset( $_POST[ 'map_' . $field_key . '_attr_value' ] ) ? sanitize_html_class( wp_unslash( $_POST[ 'map_' . $field_key . '_attr_value' ] ) ) : '';
-
-		$field_map[ $field_key ] = array(
-			'source'     => $source,
-			'tag'        => $tag,
-			'attr_type'  => $attr_type,
-			'attr_value' => $attr_value,
-		);
-	}
-	update_post_meta( $feed_id, '_teatatu_news_rss_field_map', $field_map );
+	update_post_meta( $feed_id, '_teatatu_news_rss_field_map', teatatu_news_rss_sanitize_field_map_from_request() );
 
 	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'RSS feed saved.', 'teatatu-news' ), 45 );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'rss' ), admin_url( 'admin.php' ) ) );

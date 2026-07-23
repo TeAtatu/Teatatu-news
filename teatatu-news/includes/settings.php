@@ -93,7 +93,14 @@ function teatatu_news_render_settings_page() {
 	$github_token_is_set = (bool) teatatu_news_get_option( 'teatatu_news_github_token', '' );
 	$delete_on_uninstall = (bool) teatatu_news_get_option( 'teatatu_news_delete_data_on_uninstall', false );
 	$master_site_id      = teatatu_news_get_master_site_id();
-	$post_url            = is_multisite() ? network_admin_url( 'admin-post.php' ) : admin_url( 'admin-post.php' );
+	// Always the plain (non-network) admin-post.php, even when this page is
+	// rendered under Network Admin — same pattern used by every other form
+	// in this plugin (News items, Sources/Categories, RSS Feeds). It's a
+	// same-site URL regardless of context (Network Admin already only ever
+	// runs on the network's main site), and our own current_user_can()
+	// check below still enforces manage_network_options on multisite — the
+	// routing doesn't need to be network-specific to be secure.
+	$post_url = admin_url( 'admin-post.php' );
 
 	if ( isset( $_GET['teatatu_news_settings_saved'] ) ) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved.', 'teatatu-news' ) . '</p></div>';

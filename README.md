@@ -39,14 +39,18 @@ WordPress 6.0+ / PHP 7.4+ site (single-site or multisite) and activate it.
   no WordPress.org listing needed.
 - Imports News items from RSS/Atom feeds: add any number of feeds (each with
   its own check cadence, and pausable without deleting its config), with a
-  configurable per-field content mapping (Title/Excerpt/Image, by HTML
-  element and class/id) sourced from either the feed's own data or the
-  linked article page. By default, new items land as drafts like everything
+  configurable per-field content mapping (Title, Excerpt, Image, Read More
+  URL, and Publish Date — each by HTML element and class/id) sourced from
+  either the feed's own data or the linked article page. By default, new
+  items land as drafts like everything
   else, and a later update to an already-published item is held as a
   pending update for a human to review and apply — never applied
   automatically. Each feed can independently opt into publishing new items
   immediately or applying updates immediately, but only for a user who
-  already holds real publish/edit-published rights.
+  already holds real publish/edit-published rights. Each item's original
+  publish date is stored and used for sorting — News Items and every
+  shortcode already list newest-first by default, so imports land in true
+  chronological order.
 - Uses **only standard WordPress database tables** — no custom tables, and
   no local file storage of any kind. Images are link-only.
 

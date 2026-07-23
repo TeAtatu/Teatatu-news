@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.6.0
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -180,29 +180,76 @@ independently configured:
   configuring user already has.
 * **Default Source** and **Default Category** — assigned to every News item
   the feed creates.
-* **Content Mapping** for Title, Excerpt, and Image URL, each independently
-  sourced from either the feed item's own data (Title, Description, full
-  Content/`content:encoded`, or its Enclosure/media-thumbnail for the image)
-  or from the linked article's own page, fetched and scraped separately.
-  Optionally narrow to one HTML element by tag and/or class/id — e.g. pull
-  the excerpt from `<div class="article-body">` inside `content:encoded`
-  rather than using the whole field. All formatting is stripped from mapped
-  content except `<a>` links; Title is always reduced to plain text (as
-  WordPress post titles always are).
+* **Content Mapping** for five fields — Title, Excerpt, Image URL, Read
+  More URL, and Publish Date — each independently sourced from either the
+  feed item's own data (Title, Description, full Content/`content:encoded`,
+  its Enclosure/media-thumbnail for the image, its own Item Link for Read
+  More URL, or its own reported Publish Date) or from the linked article's
+  own page, fetched and scraped separately. Optionally narrow to one HTML
+  element by tag and/or class/id — e.g. pull the excerpt from
+  `<div class="article-body">` inside `content:encoded` rather than using
+  the whole field. Leaving Element and Class/ID blank uses an RSS-based
+  source's whole value as-is; "Article Page" always requires an Element
+  and/or Class/ID, since scraping the entire page unnarrowed would grab far
+  more than intended.
+  - All formatting is stripped from mapped Excerpt content except `<a>`
+    links; Title is always reduced to plain text (as WordPress post titles
+    always are).
+  - **Read More URL** defaults to the feed item's own link, but can be
+    remapped to a link found elsewhere (e.g. an `<a href="...">` inside
+    `content:encoded`, or on the article page). This only changes what's
+    displayed to readers — see "Deduplication and re-imports" below for why
+    it's always safe to remap.
+  - **Publish Date** defaults to the feed's own reported date
+    (`<pubDate>`/`<published>`). Mapped from anything else, it always
+    requires an Element and/or Class/ID too — there's no reliable way to
+    find a date inside an unmarked block of text. The selected element's
+    `datetime="..."` attribute is used if present (e.g.
+    `<time datetime="2024-03-01T10:00:00Z">`), otherwise its visible text
+    is parsed automatically (e.g. "1 March 2024").
+  - If a field can't be resolved, it fails safe: an unresolved Title skips
+    the item entirely (nothing is created); Excerpt/Image URL are simply
+    left blank; Read More URL falls back to the feed's own item link;
+    Publish Date falls back to the time the item was imported.
+
+Click **Preview Example Values** (above the Content Mapping table) at any
+time — including before saving — to fetch the feed's most recent item and
+show, right in the "Example" column, exactly what the current mapping
+produces for each field. It uses whatever is currently filled into the
+form, so you can adjust a Source/Element/Class-or-ID and preview again to
+compare, without saving or waiting for the next scheduled check. Requires
+a Feed URL to already be entered; the preview runs the same resolution
+logic as a real import, so what it shows is exactly what saving and
+checking the feed would produce.
+
+Publish Date is stored both as the News item's actual date (`post_date`/
+`post_date_gmt`) and as an explicit `_teatatu_news_rss_pub_date` meta field
+— News Items and every shortcode already sort newest-first by date by
+default, so imported items land in true chronological order (when the
+story was published) rather than in whatever order the feed happened to be
+checked. This only applies going forward: an item imported before Publish
+Date mapping was added keeps its original import time until it's next
+touched (re-synced while still a draft, or updated via Apply/Auto-Apply).
 
 = Deduplication and re-imports =
 
-A feed item is identified by its own article URL (used as both the dedupe
-key and the News item's Read More URL):
+A feed item is identified by its own item link — this dedupe key is
+completely independent of whatever the Read More URL field above is
+mapped to display, tracked separately via internal `_teatatu_news_rss_source_link`
+meta, so remapping Read More URL to a different link never causes an
+already-imported item to be re-imported as a duplicate:
 
 * **New URL** → a new News item is created as a `draft`, same as every other
   News item — a human still reviews and publishes it. If the feed has
   **Auto-Publish New Items** turned on, it's created already `publish`ed
   instead, with no review step.
-* **Same URL, existing item still unreviewed** (draft/pending) → that item's
-  Title/Excerpt/Image are refreshed in place to match the feed's current
-  content, regardless of either toggle (nothing has been reviewed yet, so
-  there's nothing to protect).
+* **Same URL, existing item still unreviewed** (draft/pending) → that
+  item's Title/Excerpt/Image/Read More URL/Publish Date are refreshed in
+  place to match the feed's current content. If the feed has
+  **Auto-Publish New Items** turned on, this is also where a
+  previously-imported item gets published — not just brand new items — so
+  turning the toggle on catches up anything the feed already created
+  before the toggle was enabled.
 * **Same URL, existing item already published** → by default, the live
   post is left untouched. The freshly-fetched fields are stashed as a
   pending update and surfaced on the News tab as **"RSS update
@@ -249,6 +296,51 @@ Source/Category term, on every site in the network. Since images are
 link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.6.0 =
+* Added a "Preview Example Values" button to the RSS Feeds Content Mapping
+  table: fetches the feed's most recent item and shows what the current
+  (even unsaved) mapping produces for each field, so you can check and
+  adjust a mapping without waiting for the next scheduled check.
+* RSS field mapping now covers Read More URL and Publish Date, in addition
+  to the existing Title, Excerpt, and Image URL. Each defaults to the
+  feed's own item link / publish date and can be remapped to a different
+  element on the RSS item, the article's full content, or the article
+  page itself, the same way the other three fields already worked.
+* Fixed: remapping Read More URL could have broken deduplication, since
+  matching against an already-imported item previously relied on that
+  same field. Re-imports now match on the feed's own item link
+  internally (a new `_teatatu_news_rss_source_link` meta field),
+  independently of whatever Read More URL is currently mapped to display
+  — existing items imported before this update fall back to matching on
+  their stored Read More URL, so nothing needs to be re-imported.
+* Rewrote the Content Mapping explanation on the RSS Feeds tab and in
+  this readme to cover all five mappable fields and clarify how the
+  default-source/selector/fallback behavior works.
+
+= 1.5.1 =
+* Fixed: the Master Site setting (Network Admin > Settings > Teatatu News)
+  could be selected but never actually saved. Its form posted to
+  `network_admin_url('admin-post.php')`, but WordPress core has no
+  `wp-admin/network/admin-post.php` file — the submission 404'd before
+  ever reaching the save handler. Now posts to the plain `admin-post.php`,
+  the same one every other form in this plugin already uses successfully.
+  This also fixes the "Check for Updates Now" button on multisite, which
+  shared the same broken form-action URL.
+
+= 1.5.0 =
+* Fixed: Auto-Publish New Items only applied to genuinely new feed items —
+  an item already imported as a draft before the toggle was turned on
+  stayed a draft forever, since later syncs never re-checked its status.
+  Turning Auto-Publish on now also publishes previously-imported,
+  still-unreviewed items from that feed, not just brand new ones.
+* Each feed item's own publish date is now read from the feed (RSS
+  `pubDate` / Atom `published`) and stored, both as the News item's date
+  (so News Items and every shortcode, which already sort newest-first by
+  date by default, list imports in true chronological order) and as an
+  explicit `_teatatu_news_rss_pub_date` meta field. Added a Date column to
+  the News Items list. Only applies going forward — items imported before
+  this update keep their original import time until next touched.
 
 = 1.4.0 =
 * Added two per-feed RSS toggles, both off by default: "Auto-Publish New

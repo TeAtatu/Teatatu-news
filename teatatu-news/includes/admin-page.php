@@ -249,6 +249,7 @@ function teatatu_news_render_news_tab() {
 				<th><?php esc_html_e( 'Source', 'teatatu-news' ); ?></th>
 				<th><?php esc_html_e( 'Category', 'teatatu-news' ); ?></th>
 				<th><?php esc_html_e( 'Status', 'teatatu-news' ); ?></th>
+				<th><?php esc_html_e( 'Date', 'teatatu-news' ); ?></th>
 				<th><?php esc_html_e( 'Read More', 'teatatu-news' ); ?></th>
 				<th><?php esc_html_e( 'Actions', 'teatatu-news' ); ?></th>
 			</tr>
@@ -278,6 +279,7 @@ function teatatu_news_render_news_tab() {
 							 | <a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'teatatu_news_dismiss_rss_update', 'post_id' => $id ), admin_url( 'admin-post.php' ) ), 'teatatu_news_dismiss_rss_update_' . $id ) ); ?>"><?php esc_html_e( 'Dismiss', 'teatatu-news' ); ?></a>
 						<?php endif; ?>
 					</td>
+					<td><?php echo esc_html( get_the_date() ); ?></td>
 					<td><?php if ( $read_more_url ) : ?><a href="<?php echo esc_url( $read_more_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View', 'teatatu-news' ); ?></a><?php else : ?>&#8212;<?php endif; ?></td>
 					<td>
 						<?php if ( current_user_can( 'edit_post', $id ) ) : ?>
@@ -290,7 +292,7 @@ function teatatu_news_render_news_tab() {
 				</tr>
 			<?php endwhile; ?>
 		<?php else : ?>
-			<tr><td colspan="7"><?php esc_html_e( 'No News items yet.', 'teatatu-news' ); ?></td></tr>
+			<tr><td colspan="8"><?php esc_html_e( 'No News items yet.', 'teatatu-news' ); ?></td></tr>
 		<?php endif; ?>
 		</tbody>
 	</table>
