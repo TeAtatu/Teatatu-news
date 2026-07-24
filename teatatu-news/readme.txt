@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -55,6 +55,9 @@ their original source, never downloaded into the Media Library.
 * An RSS Feeds importer: add any number of feed URLs, each on its own check
   cadence, with configurable per-field content mapping — see == RSS Import ==
   below
+* An HTML Feeds importer for sites with a news listing page but no RSS/Atom
+  feed: scrapes a repeating element on the page directly, with the same
+  per-field content mapping approach — see == HTML Page Feeds == below
 
 = Multisite =
 
@@ -252,7 +255,7 @@ already-imported item to be re-imported as a duplicate:
   before the toggle was enabled.
 * **Same URL, existing item already published** → by default, the live
   post is left untouched. The freshly-fetched fields are stashed as a
-  pending update and surfaced on the News tab as **"RSS update
+  pending update and surfaced on the News tab as **"Feed update
   available"** with **Apply** / **Dismiss** actions — nothing about a
   published item changes without a human explicitly clicking Apply. If the
   feed has **Auto-Apply Updates to Published Items** turned on, the change
@@ -264,6 +267,80 @@ on for a feed you trust.
 
 Deleting a feed's configuration only removes that configuration; News items
 it already created are left exactly as they are.
+
+== HTML Page Feeds ==
+
+**Teatatu News > HTML Feeds** (requires the `manage_teatatu_news_html_feeds`
+capability, granted to Administrator/Editor by default — never to the
+`teatatu_news_agent` role) is for sites that publish a news/events listing
+page but no RSS or Atom feed — e.g. a school website's `/news` page. It
+fetches that page directly with a plain HTTP request and scrapes it,
+instead of parsing a feed file.
+
+* **Page URL** — the listing page to fetch, exactly as a browser would see
+  it (not a feed file). Same cadence, Active/Paused, Auto-Publish New
+  Items, Auto-Apply Updates to Published Items, and Default Source/Category
+  options as RSS Feeds, with the same off-by-default behavior and the same
+  capability requirements for the two toggles.
+* **Repeating Item** — the one element that repeats once per news item on
+  the page (e.g. each card in a grid, or each row in a list), chosen by
+  Element (tag) and/or Class or ID. This is required and has no default:
+  without it, there is nothing to import. Every field below is then found
+  by searching *inside* each matching element in turn, never the whole
+  page.
+* **Content Mapping** for the same five fields as RSS Feeds — Title,
+  Excerpt, Image URL, Read More URL, and Publish Date — but sourced
+  differently, since one repeating item is a single HTML fragment rather
+  than several distinct feed fields:
+  - Each field's Source is either **Within Repeating Item** (search inside
+    the matched card/row itself) or **Linked Article Page** (fetch that
+    item's own Read More URL and search the fetched page instead — useful
+    when the listing page only shows a title and the rest lives on the
+    article).
+  - **Title** and **Excerpt** always require an Element and/or Class/ID —
+    unlike RSS mapping, there is no single "whole item" text to fall back
+    to, since one repeating item's HTML mixes together its title, date,
+    excerpt, and links.
+  - **Image URL** and **Read More URL** can be left with no Element/
+    Class-ID: they then search the whole repeating item for its first
+    image (an `<img>`, or a CSS `background-image` — some sites set card
+    images that way) or its first link, respectively.
+  - **Read More URL** can only be sourced **Within Repeating Item**, never
+    the linked page (there would be nothing to fetch yet) — see
+    "Identifying items" below for why this field is required.
+  - **Publish Date** always requires an Element and/or Class/ID too. Its
+    element's `datetime="..."` attribute is used if present, otherwise its
+    visible text is parsed automatically. If it can't be resolved, the item
+    still imports — it just uses the time it was imported as its date.
+  - If a field can't be resolved, it fails safe the same way RSS mapping
+    does: an unresolved Title skips the item entirely; Excerpt and Image
+    URL are simply left blank. All formatting except links is stripped
+    from mapped Excerpt content; Title is always reduced to plain text.
+
+Click **Preview Example Values** (above the Content Mapping table) at any
+time — including before saving — to fetch the Page URL and show, in the
+"Example" column, exactly what the current Repeating Item selector and
+mapping produce for the first matching item.
+
+= Identifying items =
+
+RSS feeds provide their own stable item link, independent of whatever the
+Read More URL field is mapped to display — that's what
+`_teatatu_news_rss_source_link` is for (see "Deduplication and re-imports"
+above). An HTML feed has no such separate identity: its Read More URL is
+always found by scraping the repeating item itself, so it doubles as that
+item's permanent identity too, stored internally as
+`_teatatu_news_html_source_link`. This is why Read More URL can't be
+sourced from the linked page and must resolve to something for an item to
+import at all — without it, there is nothing to recognise "the same item"
+by on the next check.
+
+Otherwise, HTML feeds behave exactly like RSS feeds for re-imports: a new
+link creates a draft (or a published item, with Auto-Publish on); an
+existing but still-unreviewed item is refreshed in place; an existing,
+published item gets a pending update — shown on the News tab exactly the
+same way, with the same Apply/Dismiss actions, since both importers share
+the same pending-update mechanism.
 
 == Installation ==
 
@@ -291,11 +368,30 @@ By default, uninstalling this plugin only removes the `teatatu_news_agent`
 role/capabilities and the plugin's own settings — all News content is left
 in place. Check **"Delete all Teatatu News data when this plugin is
 uninstalled"** on the settings page beforehand to have uninstall also
-permanently remove every News post, RSS feed configuration, and
-Source/Category term, on every site in the network. Since images are
-link-only, there is never any local media to clean up.
+permanently remove every News post, RSS feed configuration, HTML feed
+configuration, and Source/Category term, on every site in the network.
+Since images are link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.7.0 =
+* Added HTML Feeds: a second feed importer, alongside RSS Feeds, for sites
+  that publish a news/events listing page but no RSS or Atom feed. Fetches
+  the page directly and scrapes every element matching a configurable
+  "Repeating Item" selector, then maps Title/Excerpt/Image URL/Read More
+  URL/Publish Date the same general way "Article Page" mapping already
+  worked in RSS Feeds. Includes its own cadence, Active toggle,
+  Auto-Publish/Auto-Apply toggles, Default Source/Category, and a Preview
+  Example Values button — see == HTML Page Feeds == below. Manage at
+  **Teatatu News > HTML Feeds** (new `manage_teatatu_news_html_feeds`
+  capability, Administrator/Editor by default).
+* Pending updates from RSS and HTML feeds now share one review queue on the
+  News tab; its label changed from "RSS update available" to "Feed update
+  available" to reflect that.
+* Image mapping (RSS "Article Page" sources and HTML Feeds) now also finds
+  an article's image when a site sets it via a CSS `background-image`
+  style instead of an `<img>` tag, a pattern seen on real school-website
+  news cards.
 
 = 1.6.0 =
 * Added a "Preview Example Values" button to the RSS Feeds Content Mapping

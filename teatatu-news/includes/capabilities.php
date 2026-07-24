@@ -55,6 +55,7 @@ function teatatu_news_editor_capabilities() {
 		'delete_teatatu_news_categories'     => true,
 		'assign_teatatu_news_categories'     => true,
 		'manage_teatatu_news_rss_feeds'      => true,
+		'manage_teatatu_news_html_feeds'     => true,
 	);
 }
 

@@ -51,6 +51,12 @@ WordPress 6.0+ / PHP 7.4+ site (single-site or multisite) and activate it.
   publish date is stored and used for sorting — News Items and every
   shortcode already list newest-first by default, so imports land in true
   chronological order.
+- Imports News items from plain HTML pages too, for sites with a news
+  listing page but no RSS/Atom feed: fetches the page directly and scrapes
+  every element matching a configurable "Repeating Item" selector, then
+  maps the same five fields the same general way. Shares its cadence,
+  Active toggle, Auto-Publish/Auto-Apply toggles, and pending-update review
+  queue with the RSS importer, in its own **HTML Feeds** tab.
 - Uses **only standard WordPress database tables** — no custom tables, and
   no local file storage of any kind. Images are link-only.
 
@@ -85,8 +91,8 @@ teatatu-news/            the plugin itself — drop this folder into wp-content/
   includes/                one file per concern — post type, taxonomies, meta boxes,
                              the image URL resolver, admin columns, the maintenance admin
                              page, REST routes, shortcodes, settings, the GitHub updater,
-                             the RSS feed config + importer engine, capabilities, and
-                             multisite helpers
+                             the RSS and HTML feed config + importer engines, capabilities,
+                             and multisite helpers
   assets/css/               the shortcodes' minimal structural stylesheet
 prompt.md                  reusable AI prompt for extending or regenerating this plugin
 README.md                  this file

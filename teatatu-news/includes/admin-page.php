@@ -35,7 +35,7 @@ function teatatu_news_render_admin_page() {
 	}
 
 	$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'news';
-	if ( ! in_array( $tab, array( 'news', 'sources', 'categories', 'rss', 'shortcodes' ), true ) ) {
+	if ( ! in_array( $tab, array( 'news', 'sources', 'categories', 'rss', 'html', 'shortcodes' ), true ) ) {
 		$tab = 'news';
 	}
 	?>
@@ -47,6 +47,9 @@ function teatatu_news_render_admin_page() {
 			<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'categories' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'categories' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Manage Categories', 'teatatu-news' ); ?></a>
 			<?php if ( current_user_can( 'manage_teatatu_news_rss_feeds' ) ) : ?>
 				<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'rss' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'rss' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'RSS Feeds', 'teatatu-news' ); ?></a>
+			<?php endif; ?>
+			<?php if ( current_user_can( 'manage_teatatu_news_html_feeds' ) ) : ?>
+				<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'html' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'html' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'HTML Feeds', 'teatatu-news' ); ?></a>
 			<?php endif; ?>
 			<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'shortcodes' ), admin_url( 'admin.php' ) ) ); ?>" class="nav-tab <?php echo 'shortcodes' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Shortcodes', 'teatatu-news' ); ?></a>
 		</h2>
@@ -60,6 +63,8 @@ function teatatu_news_render_admin_page() {
 			teatatu_news_render_term_tab( 'teatatu_news_category' );
 		} elseif ( 'rss' === $tab ) {
 			teatatu_news_render_rss_feeds_tab();
+		} elseif ( 'html' === $tab ) {
+			teatatu_news_render_html_feeds_tab();
 		} else {
 			teatatu_news_render_shortcodes_tab();
 		}
@@ -274,7 +279,7 @@ function teatatu_news_render_news_tab() {
 						<?php echo esc_html( get_post_status( $id ) ); ?>
 						<?php $rss_pending = get_post_meta( $id, '_teatatu_news_rss_pending_update', true ); ?>
 						<?php if ( is_array( $rss_pending ) && current_user_can( 'edit_post', $id ) ) : ?>
-							<br /><span style="color:#d63638;"><?php esc_html_e( 'RSS update available', 'teatatu-news' ); ?></span><br />
+							<br /><span style="color:#d63638;"><?php esc_html_e( 'Feed update available', 'teatatu-news' ); ?></span><br />
 							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'teatatu_news_apply_rss_update', 'post_id' => $id ), admin_url( 'admin-post.php' ) ), 'teatatu_news_apply_rss_update_' . $id ) ); ?>"><?php esc_html_e( 'Apply', 'teatatu-news' ); ?></a>
 							 | <a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'teatatu_news_dismiss_rss_update', 'post_id' => $id ), admin_url( 'admin-post.php' ) ), 'teatatu_news_dismiss_rss_update_' . $id ) ); ?>"><?php esc_html_e( 'Dismiss', 'teatatu-news' ); ?></a>
 						<?php endif; ?>

@@ -590,10 +590,28 @@ function teatatu_news_rss_resolve_text_field( $item, $mapping, $page_html, $fiel
 	}
 
 	if ( 'title' === $field_type ) {
-		return trim( wp_strip_all_tags( $raw_html ) );
+		return teatatu_news_rss_normalize_whitespace( wp_strip_all_tags( $raw_html ) );
 	}
 
-	return trim( teatatu_news_rss_clean_html( $raw_html ) );
+	return teatatu_news_rss_normalize_whitespace( teatatu_news_rss_clean_html( $raw_html ) );
+}
+
+/**
+ * Trims a resolved Title/Excerpt, also converting non-breaking spaces to
+ * regular ones first. Page-builder themes (Elementor, Divi, Avada/Fusion,
+ * and similar) very commonly lead a paragraph's markup with `&nbsp;` — e.g.
+ * `<p>&nbsp; Kia ora ...</p>` — which trim() alone doesn't remove, since
+ * trim() only strips plain ASCII whitespace, not the U+00A0 character
+ * `&nbsp;` decodes to. Left unhandled, that survives as a stray visible
+ * leading space in the resolved field (a real, visible rendering glitch,
+ * not just a data-cleanliness nitpick — a non-breaking space by definition
+ * never collapses the way a normal space does).
+ *
+ * @param string $text Already tag-stripped/cleaned text.
+ * @return string
+ */
+function teatatu_news_rss_normalize_whitespace( $text ) {
+	return trim( str_replace( "\xC2\xA0", ' ', (string) $text ) );
 }
 
 /**
@@ -715,7 +733,11 @@ function teatatu_news_rss_node_inner_html( $node ) {
 
 /**
  * Finds an image URL within a DOM element: its own src if it's an <img>,
- * otherwise the src of the first <img> descendant.
+ * the src of the first <img> descendant, or — since some sites set an
+ * article's image as a CSS background-image rather than an <img> tag (seen
+ * on real school-website news cards, e.g. an <a class="..." style=
+ * "background-image:url(...)"> wrapping the whole card) — the first
+ * background-image found on the node itself or any descendant.
  *
  * @param DOMNode $node Element.
  * @return string
@@ -730,6 +752,35 @@ function teatatu_news_rss_node_image_url( $node ) {
 	$imgs = $node->getElementsByTagName( 'img' );
 	if ( $imgs->length > 0 ) {
 		return $imgs->item( 0 )->getAttribute( 'src' );
+	}
+
+	$bg = teatatu_news_rss_node_background_image_url( $node );
+	if ( $bg ) {
+		return $bg;
+	}
+	if ( $node->hasChildNodes() ) {
+		$xpath      = new DOMXPath( $node->ownerDocument );
+		$styled     = $xpath->query( './/*[contains(@style,"background-image")]', $node );
+		if ( $styled && $styled->length > 0 ) {
+			return teatatu_news_rss_node_background_image_url( $styled->item( 0 ) );
+		}
+	}
+	return '';
+}
+
+/**
+ * Extracts the URL from a `background-image:url(...)` declaration in a
+ * single element's own inline style attribute, if present.
+ *
+ * @param DOMElement $node Element.
+ * @return string
+ */
+function teatatu_news_rss_node_background_image_url( $node ) {
+	if ( ! ( $node instanceof DOMElement ) || ! $node->hasAttribute( 'style' ) ) {
+		return '';
+	}
+	if ( preg_match( '/background-image\s*:\s*url\(\s*[\'"]?([^\'")]+)[\'"]?\s*\)/i', $node->getAttribute( 'style' ), $matches ) ) {
+		return trim( $matches[1] );
 	}
 	return '';
 }
@@ -909,7 +960,7 @@ function teatatu_news_handle_apply_rss_update() {
 		delete_post_meta( $post_id, '_teatatu_news_rss_pending_update' );
 	}
 
-	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'RSS update applied.', 'teatatu-news' ), 45 );
+	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'Feed update applied.', 'teatatu-news' ), 45 );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'news' ), admin_url( 'admin.php' ) ) );
 	exit;
 }
@@ -929,7 +980,7 @@ function teatatu_news_handle_dismiss_rss_update() {
 
 	delete_post_meta( $post_id, '_teatatu_news_rss_pending_update' );
 
-	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'RSS update dismissed.', 'teatatu-news' ), 45 );
+	set_transient( 'teatatu_news_admin_notice_' . get_current_user_id(), __( 'Feed update dismissed.', 'teatatu-news' ), 45 );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'teatatu-news', 'tab' => 'news' ), admin_url( 'admin.php' ) ) );
 	exit;
 }

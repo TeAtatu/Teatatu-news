@@ -31,12 +31,13 @@ teatatu_news_register_taxonomies();
 function teatatu_news_uninstall_cleanup_site( $delete_data ) {
 	teatatu_news_remove_role_and_caps();
 	wp_clear_scheduled_hook( 'teatatu_news_rss_cron_tick' );
+	wp_clear_scheduled_hook( 'teatatu_news_html_cron_tick' );
 
 	if ( ! $delete_data ) {
 		return;
 	}
 
-	foreach ( array( 'teatatu_news', 'teatatu_news_rssfeed' ) as $post_type ) {
+	foreach ( array( 'teatatu_news', 'teatatu_news_rssfeed', 'teatatu_news_webfeed' ) as $post_type ) {
 		$post_ids = get_posts(
 			array(
 				'post_type'      => $post_type,
