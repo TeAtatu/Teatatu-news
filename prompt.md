@@ -294,7 +294,62 @@ Preserve these invariants unless the change explicitly asks to alter them:
      schedules can silently go missing outside of deactivation. Keep that
      safety net if you touch the scheduling code.
 
-10. Capability grants are database state, not code — add_cap()/add_role()
+10. HTML Feeds (includes/html-feeds.php, includes/html-importer.php) is a
+    second, parallel importer for sites with a news listing page but no
+    RSS/Atom feed — scraping the page directly instead of parsing a feed
+    file. It deliberately mirrors RSS Feeds' shape (own CPT
+    `teatatu_news_webfeed`, exactly 20 characters — see point 9's slug-
+    length note, same trap applies to any new post type) and reuses,
+    rather than duplicates, everything from RSS import that's actually
+    generic:
+    - All DOM work — teatatu_news_rss_select_element(),
+      _node_inner_html(), _node_image_url(), _node_link_url(),
+      _node_date_gmt(), _clean_html() — plus teatatu_news_rss_fetch_page_html()
+      and teatatu_news_rss_apply_pub_date(), all in includes/rss-importer.php.
+      None of that is RSS-specific despite the `rss_` prefix; it's plain
+      HTML-fragment parsing and a generic post_date writer. Don't fork a
+      second copy of any of these for an HTML-feed-specific tweak — fix or
+      extend the shared one (this is how the CSS background-image fallback
+      in teatatu_news_rss_node_image_url() ended up benefiting both
+      importers at once).
+    - The pending-update mechanism entirely: teatatu_news_rss_maybe_flag_pending_update(),
+      teatatu_news_rss_apply_fields_to_post(), the `_teatatu_news_rss_pending_update`
+      meta key, and the News tab's existing Apply/Dismiss admin-post.php
+      handlers. A pending update is just "fields waiting for review,"
+      regardless of which importer produced them — HTML-sourced updates
+      show up and get applied/dismissed through the exact same UI with no
+      HTML-specific code at all. Don't build a second pending-update
+      queue/UI for HTML feeds.
+    - `_teatatu_news_rss_pub_date` postmeta, for the same reason — "the
+      feed's own reported publish date" is equally true whichever importer
+      resolved it.
+    The one thing HTML feeds need that RSS doesn't: a required "Repeating
+    Item" selector (tag + class/id, stored as
+    `_teatatu_news_html_item_selector`) identifying which element repeats
+    once per news item on the page — teatatu_news_html_select_all_items()
+    finds every match (unlike teatatu_news_rss_select_element(), which
+    only ever returns the first). Each match's inner HTML becomes the
+    per-item fragment that Content Mapping's five fields are then resolved
+    against, via teatatu_news_html_resolve_*() functions using a simpler
+    'item'/'page' source model than RSS's four sources (there's no
+    SimplePie title/description/content split for a scraped fragment).
+    Because there's no separate feed-native "item link" the way SimplePie
+    provides one for RSS, HTML feeds have no
+    `_teatatu_news_rss_source_link`-style decoupling: Read More URL can
+    only be sourced from within the repeating item (never the linked
+    page — there'd be nothing to fetch yet) and doubles as this item's
+    dedupe identity directly, stored as `_teatatu_news_html_source_link`
+    and matched by teatatu_news_html_find_existing_post(). If it can't be
+    resolved, the item is skipped — there's nothing to dedupe against.
+    Title/Excerpt/Publish Date always require an Element/Class-ID with no
+    "whole item" fallback (unlike RSS's whole-value defaults) since one
+    repeating item mixes title/date/excerpt/links together with no single
+    field that's "just the text"; Image/Read More URL default to "search
+    the whole item for its first image/link" when unmapped, which is safe
+    precisely because those look for one specific element type rather than
+    concatenating text.
+
+11. Capability grants are database state, not code — add_cap()/add_role()
     only ever run at activation (teatatu_news_provision_site(), called from
     the activation hook, wp_initialize_site, and — for drift-correction —
     teatatu_news_maybe_upgrade_caps() in includes/capabilities.php, which
@@ -307,11 +362,11 @@ Preserve these invariants unless the change explicitly asks to alter them:
     just silently denies access with no code-level bug to find. If you add
     a new capability to teatatu_news_editor_capabilities() or
     teatatu_news_agent_capabilities(), bumping TEATATU_NEWS_VERSION (which
-    point 10 below already requires you to do) is what makes existing
+    point 12 below already requires you to do) is what makes existing
     sites actually receive it — don't skip the version bump thinking it's
-    only about the update-checker (see point 11 below).
+    only about the update-checker (see point 12 below).
 
-11. Whatever you change, update in lockstep:
+12. Whatever you change, update in lockstep:
     - teatatu-news/readme.txt (user-facing docs, REST/shortcode reference)
     - teatatu-news/SKILL.md, if the change touches anything an AI agent
       interacts with over the REST API
@@ -354,7 +409,9 @@ auto-publish" rule on your own judgment.
 | `includes/shortcodes.php` | Per-site + network shortcodes, shared renderer, shared aggregation/cache function |
 | `includes/updater.php` | GitHub-release-based self-hosted auto-updater |
 | `includes/rss-feeds.php` | `teatatu_news_rssfeed` CPT (admin-only, no native UI, never in REST), "RSS Feeds" tab + CRUD |
-| `includes/rss-importer.php` | Cron scheduling/tick, fetch_feed(), DOM element/class/id extraction, dedupe + create/update/pending-update logic (incl. auto-publish/auto-apply and pub-date handling), Apply/Dismiss handlers |
+| `includes/rss-importer.php` | Cron scheduling/tick, fetch_feed(), DOM element/class/id extraction (shared with HTML Feeds), dedupe + create/update/pending-update logic (incl. auto-publish/auto-apply and pub-date handling), Apply/Dismiss handlers |
+| `includes/html-feeds.php` | `teatatu_news_webfeed` CPT (admin-only, no native UI, never in REST), "HTML Feeds" tab + CRUD, Repeating Item selector |
+| `includes/html-importer.php` | Cron scheduling/tick, page fetch + repeating-element extraction, per-item field resolution, create/update/pending-update logic (reuses rss-importer.php's generic helpers throughout) |
 | `uninstall.php` | Retention-aware cleanup, run standalone (main plugin file not loaded) |
 
 ## Original build spec
