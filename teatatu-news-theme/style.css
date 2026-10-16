@@ -1,0 +1,270 @@
+/*
+Theme Name: Teatatu News Theme
+Theme URI: https://github.com/TeAtatu/Teatatu-news
+Description: Display theme for news.teatatu.nz, part of the Te Atatū Local network. Renders the news, search and story pages from the Teatatu News plugin's data — it stores no data of its own — with an optional "What's on" strip from the Teatatu Events plugin. Styled with the Te Atatū Local design system (Kōtare blue site accent; events take the Pōhutukawa accent). Requires the Teatatu News plugin.
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 7.4
+Author: TeAtatu
+License: GPL-3.0
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain: teatatu-news-theme
+*/
+
+/*
+ * Layout for the News site. Every colour, type style, space, radius and
+ * shadow comes from the Te Atatū Local design system:
+ *   assets/css/te-atatu-local-tokens.css  — tokens (light + dark)
+ *   assets/css/te-atatu-local.css         — tal-* components (buttons, nav, bands, event cards…)
+ * <html data-site="news"> points `primary` at Kōtare blue. The design
+ * system's event components (.tal-event, .tal-event-row, [data-site="events"])
+ * re-point it at Pōhutukawa on their own — that is what makes events read as
+ * events inside the news site. Use role tokens here (surface, ink, primary,
+ * border…), never raw hex values.
+ */
+
+/* ---------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+	margin: 0;
+	background: var(--surface);
+	color: var(--ink);
+	font: var(--t-body);
+	-webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--primary-text); }
+a:hover { color: var(--ink); }
+input, select, button, textarea { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tal-icon, svg[aria-hidden="true"] { flex: none; }
+
+.screen-reader-text {
+	position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+	clip: rect(1px, 1px, 1px, 1px); clip-path: inset(50%); white-space: nowrap;
+}
+.skip-link:focus {
+	position: fixed; top: var(--space-2); left: var(--space-2); z-index: 100; width: auto; height: auto; clip: auto; clip-path: none;
+	padding: var(--space-3) var(--space-4); background: var(--surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+}
+
+.ttn-wrap { max-width: 1240px; margin: 0 auto; padding-left: var(--space-5); padding-right: var(--space-5); }
+.ttn-section { padding-top: var(--space-12); padding-bottom: var(--space-12); }
+.ttn-display { font: var(--t-h1); letter-spacing: -0.015em; }
+.ttn-eyebrow { font: var(--t-caption); letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary-text); }
+.ttn-lead { font: var(--t-body-lg); color: var(--ink-muted); max-width: 44ch; }
+.ttn-muted { color: var(--ink-muted); }
+.ttn-section-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+.ttn-section-head h2 { font: var(--t-h2); letter-spacing: -0.01em; }
+.ttn-section-head p { margin-top: var(--space-1); color: var(--ink-muted); }
+.ttn-arrow-link { display: inline-flex; align-items: center; gap: var(--space-2); font: var(--t-label); text-decoration: none; min-height: 44px; }
+.ttn-plain-link { color: inherit; text-decoration: none; }
+.ttn-plain-link:hover { text-decoration: underline; color: inherit; }
+
+.tal-btn svg { width: 20px; height: 20px; }
+
+/* Form controls */
+.ttn-field { display: flex; flex-direction: column; gap: var(--space-1); font: var(--t-label); color: var(--ink); min-width: 0; }
+.ttn-control {
+	height: 48px; width: 100%; padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+	background: var(--surface); color: var(--ink); font: var(--t-body);
+}
+
+/* Chips (topics, sources, active filters) */
+.ttn-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ttn-chip { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); font: var(--t-label); color: var(--ink); text-decoration: none; background: var(--surface-raised); }
+.ttn-chip:hover { background: var(--primary-soft); color: var(--ink); }
+.ttn-chip--active { background: var(--primary-soft); border-color: transparent; color: var(--primary-text); }
+.ttn-chip svg { width: 16px; height: 16px; }
+
+/* ---------------------------------------------------------------------
+   Header: the design system's NetworkNav (.tal-nav) — site extras only
+   --------------------------------------------------------------------- */
+.tal-nav-bar { max-width: 1240px; margin: 0 auto; padding: 0 var(--space-5); }
+.tal-network { justify-content: flex-start; }
+.tal-nav-search { max-width: 520px; }
+.tal-nav-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--ink); font: var(--t-body-sm); outline: none; }
+.tal-nav-search:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tal-nav-sub { max-width: 1240px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
+.tal-nav-sub ul { display: contents; list-style: none; }
+.tal-nav-sub li { display: flex; }
+.tal-nav-sub a { display: inline-flex; align-items: center; padding: 0 var(--space-3); color: var(--ink-muted); font: var(--t-label); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tal-nav-sub .current-menu-item > a, .tal-nav-sub a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--primary-text); }
+.tal-nav-sub a:hover { color: var(--ink); }
+@media (max-width: 480px) {
+	.tal-nav-bar { gap: var(--space-3); }
+	.tal-wordmark { font-size: 18px; }
+}
+
+/* ---------------------------------------------------------------------
+   Footer (ink block)
+   --------------------------------------------------------------------- */
+.ttn-footer { background: var(--ink); color: var(--ink-inverse); margin-top: var(--space-12); }
+.ttn-footer__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-8); padding-top: var(--space-12); padding-bottom: var(--space-12); font: var(--t-body-sm); }
+.ttn-footer .tal-wordmark, .ttn-footer .tal-wordmark span { color: var(--ink-inverse); }
+.ttn-footer p { opacity: .82; margin-top: var(--space-2); }
+.ttn-footer h2 { font: var(--t-label); margin-bottom: var(--space-2); }
+.ttn-footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ttn-footer a { color: var(--ink-inverse); opacity: .82; text-decoration: none; }
+.ttn-footer a:hover { opacity: 1; text-decoration: underline; color: var(--ink-inverse); }
+
+/* ---------------------------------------------------------------------
+   Front page
+   --------------------------------------------------------------------- */
+/* Sub-sites use a flat primary-soft band for the hero (.tal-band), not the sunrise glow. */
+.ttn-hero-band { margin-top: var(--space-8); padding: var(--space-12); }
+.ttn-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: var(--space-12); align-items: center; }
+.ttn-hero__copy { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+.ttn-hero h1 { font: var(--t-display); letter-spacing: -0.02em; }
+.ttn-hero__media { position: relative; min-height: 420px; border-radius: var(--radius-lg); background: var(--surface-sunken); overflow: hidden; }
+.ttn-hero__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ttn-search-card { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-md); }
+
+/* Featured (latest) story in the hero */
+.ttn-feature { display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; text-decoration: none; color: var(--ink); min-width: 0; }
+.ttn-feature:hover { color: var(--ink); }
+.ttn-feature__media { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--surface-sunken); }
+.ttn-feature__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ttn-feature__body { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5) var(--space-6) var(--space-6); }
+.ttn-feature__title { font: var(--t-h2); letter-spacing: -0.01em; }
+.ttn-feature:hover .ttn-feature__title { text-decoration: underline; }
+
+.ttn-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--space-6); }
+.ttn-card-grid--events { grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+.ttn-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--space-6); }
+.ttn-tile { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); text-decoration: none; color: var(--ink); transition: box-shadow .2s, transform .2s; }
+.ttn-tile:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: var(--ink); }
+.ttn-tile__icon { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--primary-soft); color: var(--primary-text); }
+.ttn-tile__title { font: var(--t-h4); }
+.ttn-tile__text { color: var(--ink-muted); font: var(--t-body-sm); }
+.ttn-tile__meta { margin-top: auto; padding-top: var(--space-2); font: var(--t-label); color: var(--primary-text); }
+
+.ttn-cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-6); }
+.ttn-cta h2 { font: var(--t-h2); letter-spacing: -0.01em; }
+.ttn-cta p { margin-top: var(--space-2); color: var(--ink-muted); font: var(--t-body-lg); }
+.ttn-cta__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+/* ---------------------------------------------------------------------
+   Story cards
+   --------------------------------------------------------------------- */
+.ttn-card { display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; text-decoration: none; color: var(--ink); min-width: 0; transition: box-shadow .2s, transform .2s; }
+.ttn-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: var(--ink); }
+.ttn-card__media { position: relative; aspect-ratio: 3 / 2; background: var(--surface-sunken); }
+.ttn-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ttn-card__body { padding: var(--space-4) var(--space-5) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
+.ttn-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font: var(--t-body-sm); color: var(--ink-muted); }
+.ttn-card__source { font-weight: 600; color: var(--ink); }
+.ttn-card__title { font: var(--t-h4); letter-spacing: -0.005em; }
+.ttn-card:hover .ttn-card__title { text-decoration: underline; }
+.ttn-card__teaser { color: var(--ink-muted); font: var(--t-body-sm); }
+/* Category tag over a photo: a badge in the design system's pill shape. */
+.ttn-tag { position: absolute; top: var(--space-3); left: var(--space-3); display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--radius-pill); font: var(--t-caption); letter-spacing: .02em; background: var(--primary); color: var(--primary-ink); }
+.ttn-photo-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink-muted); }
+.ttn-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--surface-sunken); border: 1px solid var(--border); color: var(--ink); font: var(--t-caption); letter-spacing: .02em; }
+.ttn-badge--accent { background: var(--primary-soft); border-color: transparent; color: var(--primary-text); }
+
+/* Row card (results) */
+.ttn-row { flex-direction: row; flex-wrap: wrap; }
+.ttn-row .ttn-card__media { flex: 1 1 240px; aspect-ratio: auto; min-height: 180px; }
+.ttn-row .ttn-card__body { flex: 2 1 300px; padding: var(--space-5) var(--space-6); }
+
+/* ---------------------------------------------------------------------
+   What's on: the design system's event components, in the Events accent
+   --------------------------------------------------------------------- */
+.ttn-whatson { padding: var(--space-8); }
+.ttn-event-card { max-width: none; }
+.ttn-event-row { color: var(--ink); text-decoration: none; }
+.ttn-event-row:hover { background: var(--primary-soft); color: var(--ink); }
+.ttn-event-row__body { display: flex; flex-direction: column; min-width: 0; }
+.ttn-event-row__title { font: var(--t-label); font-size: 16px; }
+.ttn-event-row__meta { font: var(--t-body-sm); color: var(--ink-muted); }
+
+/* ---------------------------------------------------------------------
+   Search results
+   --------------------------------------------------------------------- */
+.ttn-filterbar { background: var(--surface-raised); border-bottom: 1px solid var(--border); }
+.ttn-filterbar form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); padding-top: var(--space-4); padding-bottom: var(--space-4); }
+.ttn-filterbar .ttn-control { height: 44px; }
+.ttn-filterbar .ttn-field--grow { flex: 1 1 260px; }
+.ttn-filterbar .ttn-field--sm { flex: 0 1 200px; }
+.ttn-results__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+.ttn-results__head h1 { font: var(--t-h1); letter-spacing: -0.015em; }
+.ttn-results__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.ttn-results { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; }
+.ttn-results__list { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.ttn-results__aside { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.ttn-empty { padding: var(--space-8); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+.ttn-empty h2 { font: var(--t-h4); }
+.ttn-panel { padding: var(--space-5); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: var(--space-3); }
+.ttn-panel h2 { font: var(--t-h4); }
+.ttn-panel .tal-event-row:last-child { border-bottom: 0; }
+
+.ttn-pagination .nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); padding-top: var(--space-4); }
+.ttn-pagination .page-numbers { min-width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-strong); background: var(--surface-raised); color: var(--ink); text-decoration: none; font: var(--t-label); }
+.ttn-pagination .page-numbers.current { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.ttn-pagination .page-numbers.dots { border-color: transparent; background: transparent; }
+
+/* ---------------------------------------------------------------------
+   Single story
+   --------------------------------------------------------------------- */
+.ttn-crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); font: var(--t-body-sm); color: var(--ink-muted); }
+.ttn-crumbs li + li::before { content: "/"; margin-right: var(--space-2); }
+.ttn-crumbs a { text-decoration: none; font-weight: 600; }
+.ttn-story { padding-top: var(--space-6); padding-bottom: var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); }
+.ttn-story__cols { display: flex; flex-wrap: wrap; gap: var(--space-12); align-items: flex-start; }
+.ttn-story__main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.ttn-story__aside { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.ttn-story__head { display: flex; flex-direction: column; gap: var(--space-2); }
+.ttn-story__head h1 { font: var(--t-h1); letter-spacing: -0.015em; }
+.ttn-story__meta { display: flex; flex-wrap: wrap; gap: var(--space-2); font: var(--t-body-lg); color: var(--ink-muted); }
+.ttn-story__meta a { font-weight: 600; }
+.ttn-story__media { position: relative; margin: 0; aspect-ratio: 16 / 9; border-radius: var(--radius-xl); background: var(--surface-sunken); overflow: hidden; }
+.ttn-story__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ttn-prose { color: var(--ink); font: var(--t-body-lg); max-width: 70ch; }
+.ttn-prose p + p { margin-top: 1em; }
+.ttn-story__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+/* ---------------------------------------------------------------------
+   Generic pages
+   --------------------------------------------------------------------- */
+.ttn-page { padding-top: var(--space-12); padding-bottom: var(--space-16); max-width: 760px; }
+.ttn-page h1 { font: var(--t-h1); letter-spacing: -0.015em; margin-bottom: var(--space-6); }
+.ttn-page .entry-content > * + * { margin-top: 1em; }
+
+/* ---------------------------------------------------------------------
+   Motion and small screens
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+	.ttn-card, .ttn-tile, .tal-btn { transition: none; }
+	.ttn-card:hover, .ttn-tile:hover { transform: none; }
+}
+@media (max-width: 720px) {
+	.ttn-wrap { padding-left: var(--space-4); padding-right: var(--space-4); }
+	.ttn-section { padding-top: var(--space-8); padding-bottom: var(--space-8); }
+	.ttn-hero-band { margin-top: var(--space-4); padding: var(--space-6) var(--space-4); border-radius: var(--radius-lg); }
+	.ttn-hero h1 { font: var(--t-h1); }
+	.ttn-hero__media { min-height: 240px; }
+	.ttn-section-head h2, .ttn-cta h2 { font: var(--t-h3); }
+	.ttn-display, .ttn-results__head h1, .ttn-story__head h1 { font: var(--t-h2); }
+	.ttn-feature__title { font: var(--t-h3); }
+	.ttn-card__body { padding: var(--space-4); }
+	.tal-band { padding: var(--space-8) var(--space-4); }
+	.ttn-whatson { padding: var(--space-6) var(--space-4); }
+	.ttn-story__media { border-radius: var(--radius-lg); }
+}
+
+/* ---------------------------------------------------------------------
+   Small utilities (token-based; used instead of inline styles)
+   --------------------------------------------------------------------- */
+.ttn-small { font: var(--t-body-sm); color: var(--ink-muted); }
+.ttn-section--tight { padding-top: var(--space-8); }
+.ttn-field--inline { flex-direction: row; align-items: center; gap: var(--space-2); }
+.ttn-field--inline .ttn-control { height: 40px; width: auto; }
+.ttn-more-link { margin-top: var(--space-4); }
+.ttn-lead--gap { margin-bottom: var(--space-6); }
+.ttn-post { margin-bottom: var(--space-8); }
+.ttn-post h2 { font: var(--t-h3); margin-bottom: var(--space-2); }

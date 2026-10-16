@@ -60,6 +60,10 @@ WordPress 6.0+ / PHP 7.4+ site (single-site or multisite) and activate it.
 - Uses **only standard WordPress database tables** — no custom tables, and
   no local file storage of any kind. Images are link-only.
 
+## The News theme
+
+[`teatatu-news-theme/`](teatatu-news-theme/) is an optional **display theme** for a Te Atatū Peninsula news site (news.teatatu.nz), styled with the Te Atatū Local design system (News = Kōtare blue). Like the Homes theme it only displays: stories come from this plugin's functions, never from post meta. When the Teatatu Events plugin is also active it adds a **"What's on"** strip — events shown with the design system's own event components in the Events accent — on the home, list and story pages. Copy it to `wp-content/themes/` and activate it on the news site. See [`teatatu-news-theme/readme.txt`](teatatu-news-theme/readme.txt).
+
 ## Getting started
 
 1. Copy or symlink [`teatatu-news/`](teatatu-news/) into
@@ -94,6 +98,7 @@ teatatu-news/            the plugin itself — drop this folder into wp-content/
                              the RSS and HTML feed config + importer engines, capabilities,
                              and multisite helpers
   assets/css/               the shortcodes' minimal structural stylesheet
+teatatu-news-theme/        optional display theme (home, news list/search, story page, "What's on" strip)
 prompt.md                  reusable AI prompt for extending or regenerating this plugin
 README.md                  this file
 LICENSE                    GPL-3.0

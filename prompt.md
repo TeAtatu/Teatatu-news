@@ -116,6 +116,7 @@ _teatatu_news_rss_auto_publish/_teatatu_news_rss_auto_apply_updates, or the curr
 | `includes/html-feeds.php` | `teatatu_news_webfeed` CPT (admin-only, no native UI, never in REST), "HTML Feeds" tab + CRUD, Repeating Item selector |
 | `includes/html-importer.php` | Cron scheduling/tick, page fetch + repeating-element extraction, per-item field resolution, create/update/pending-update logic (reuses rss-importer.php's generic helpers throughout) |
 | `uninstall.php` | Retention-aware cleanup, run standalone (main plugin file not loaded) |
+| `../teatatu-news-theme/` | Optional display theme (prefix `ttn_`, own version in its `style.css`): reads this plugin only through `teatatu_news_query_items()` / `teatatu_news_normalize_item()` and never post meta; shows a "What's on" strip from Teatatu Events only when that plugin is active. If the theme needs a value that isn't in `teatatu_news_normalize_item()`, add it to the plugin first |
 
 ## Original build spec
 

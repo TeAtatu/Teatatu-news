@@ -1,0 +1,160 @@
+/*
+ * Te Atatū Local design system — component styles (tal-*), copied unchanged
+ * from the design system's components/bundle.css. Fonts are enqueued by
+ * functions.php, so the original @import is removed. Do not edit by hand:
+ * re-copy when the design system changes.
+ */
+
+/* Te Atatū Local — component styles. Load after tokens.css. All classes prefixed tal-. */
+
+.tal-root, .tal-root * { box-sizing: border-box; }
+.tal-root { font-family: var(--font-sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.tal-root :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tal-num { font-variant-numeric: tabular-nums; }
+.tal-icon { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.tal-icon-lg { width: 20px; height: 20px; }
+
+/* ---------- Button ---------- */
+.tal-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-5); border-radius: var(--radius-md); border: 1px solid transparent; font: 600 14px/20px var(--font-sans); text-decoration: none; cursor: pointer; transition: background-color .15s, box-shadow .15s, transform .05s; }
+.tal-btn:active { transform: translateY(1px); }
+.tal-btn-sm { min-height: 36px; padding: 0 var(--space-3); }
+.tal-btn-block { width: 100%; }
+.tal-btn-primary { background: var(--primary); color: var(--primary-ink); }
+.tal-btn-primary:hover { box-shadow: var(--shadow-md); }
+.tal-btn-loop { background: var(--loop); color: var(--loop-ink); }
+.tal-btn-loop:hover { box-shadow: var(--shadow-md); }
+.tal-btn-secondary { background: var(--surface-raised); color: var(--ink); border-color: var(--border-strong); }
+.tal-btn-secondary:hover { background: var(--surface-sunken); }
+.tal-btn-ghost { background: transparent; color: var(--primary-text); }
+.tal-btn-ghost:hover { background: var(--primary-soft); }
+.tal-btn[aria-pressed="true"].tal-btn-primary { background: var(--primary-soft); color: var(--primary-text); border-color: var(--primary-text); }
+
+/* ---------- TrustBadge ---------- */
+.tal-badge { display: inline-flex; align-items: center; gap: var(--space-1); height: 24px; padding: 0 10px 0 8px; border-radius: var(--radius-pill); font: 600 12px/16px var(--font-sans); letter-spacing: .02em; white-space: nowrap; }
+.tal-badge-certified { background: var(--site-market-soft); color: var(--site-market-text); }
+.tal-badge-contributor { background: var(--site-news-soft); color: var(--site-news-text); }
+.tal-badge-cause { background: var(--loop-soft); color: var(--loop-text); }
+.tal-badge-local { background: var(--surface-sunken); color: var(--ink); border: 1px solid var(--border); }
+.tal-badge-deal { background: var(--loop); color: var(--loop-ink); }
+.tal-badge-icon { width: 24px; padding: 0; justify-content: center; }
+
+/* ---------- SplitNav ---------- */
+.tal-nav { background: var(--surface-raised); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.tal-nav-bar { display: flex; align-items: center; gap: var(--space-6); height: 64px; padding: 0 var(--space-5); }
+.tal-wordmark { font: 800 20px/1 var(--font-sans); letter-spacing: -.02em; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.tal-wordmark span { color: var(--primary-text); }
+.tal-nav-search { flex: 1; display: flex; align-items: center; gap: var(--space-2); height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink-muted); font: 400 14px/20px var(--font-sans); min-width: 0; }
+.tal-nav-sub { display: flex; gap: var(--space-1); padding: 0 var(--space-5); height: 44px; align-items: stretch; border-top: 1px solid var(--border); }
+.tal-nav-sub a { display: inline-flex; align-items: center; padding: 0 var(--space-3); font: 600 14px/20px var(--font-sans); color: var(--ink-muted); text-decoration: none; border-bottom: 2px solid transparent; }
+.tal-nav-sub a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--primary-text); }
+.tal-nav-sub [data-for] { display: none; }
+
+
+/* ---------- Site theming ----------
+   One system, five sites. Put data-site on <html> (or any wrapper) and every generic
+   component (Button, links, nav, bands) re-colours to that site's accent.
+   Site-owned components carry their own site wherever they appear, so an EventCard on the
+   main homepage is still pōhutukawa and a PartnerCard is still kūmara. */
+[data-site="main"]   { --primary: var(--site-main);   --primary-ink: var(--site-main-ink);   --primary-text: var(--site-main-text);   --primary-soft: var(--site-main-soft); }
+[data-site="events"], .tal-event, .tal-event-row { --primary: var(--site-events); --primary-ink: var(--site-events-ink); --primary-text: var(--site-events-text); --primary-soft: var(--site-events-soft); }
+[data-site="news"]   { --primary: var(--site-news);   --primary-ink: var(--site-news-ink);   --primary-text: var(--site-news-text);   --primary-soft: var(--site-news-soft); }
+[data-site="homes"]  { --primary: var(--site-homes);  --primary-ink: var(--site-homes-ink);  --primary-text: var(--site-homes-text);  --primary-soft: var(--site-homes-soft); }
+[data-site="market"], .tal-partner { --primary: var(--site-market); --primary-ink: var(--site-market-ink); --primary-text: var(--site-market-text); --primary-soft: var(--site-market-soft); }
+
+/* The sunrise glow: main-site hero and the network bar's front-door tab only. */
+.tal-sunrise { background: linear-gradient(180deg, var(--sunrise-300) 0%, var(--sunrise-500) 100%); color: var(--site-main-ink); }
+
+/* ---------- NetworkNav: the shared strip that ties the five sites together ---------- */
+.tal-network { display: flex; align-items: center; gap: var(--space-1); padding: 6px var(--space-5); background: var(--ink); overflow-x: auto; scrollbar-width: none; }
+.tal-site { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); font: 600 13px/1 var(--font-sans); color: var(--ink-inverse); text-decoration: none; white-space: nowrap; opacity: .82; }
+.tal-site:hover { opacity: 1; background: rgba(128, 128, 128, 0.2); }
+.tal-site-dot { width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--primary); box-shadow: 0 0 0 2px var(--ink); }
+.tal-site[aria-current="page"] { opacity: 1; background: var(--primary); color: var(--primary-ink); }
+.tal-site[aria-current="page"] .tal-site-dot { background: var(--primary-ink); box-shadow: none; }
+.tal-network .tal-loop-chip { margin-left: auto; height: 32px; }
+.tal-network .tal-loop-dot { width: 22px; height: 22px; }
+.tal-nav-accent { height: 4px; background: var(--primary); }
+[data-site="main"] .tal-nav-accent, .tal-nav:not([data-site]) .tal-nav-accent { background: linear-gradient(90deg, var(--sunrise-300), var(--sunrise-500)); }
+
+/* ---------- Loop chip & wallet ---------- */
+.tal-loop-chip { display: inline-flex; align-items: center; gap: var(--space-2); height: 40px; padding: 0 var(--space-3) 0 6px; border-radius: var(--radius-pill); background: var(--loop-soft); color: var(--loop-text); font: 700 14px/20px var(--font-sans); text-decoration: none; white-space: nowrap; }
+.tal-loop-dot { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-pill); background: var(--loop); color: var(--loop-ink); }
+
+.tal-wallet { width: 100%; max-width: 380px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; }
+.tal-wallet-head { position: relative; padding: var(--space-5); background: var(--loop-soft); overflow: hidden; }
+.tal-wallet-head::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: var(--radius-pill); border: 18px solid var(--loop); opacity: .35; }
+.tal-wallet-label { display: flex; align-items: center; gap: var(--space-2); font: 600 14px/20px var(--font-sans); color: var(--ink); }
+.tal-wallet-balance { margin: var(--space-2) 0 0; font: 800 40px/44px var(--font-sans); letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tal-wallet-balance small { font-size: 16px; font-weight: 600; color: var(--ink-muted); letter-spacing: 0; margin-left: var(--space-1); }
+.tal-wallet-lock { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-3); padding: 4px 10px; border-radius: var(--radius-pill); background: var(--loop); color: var(--loop-ink); font: 700 12px/16px var(--font-sans); letter-spacing: .02em; position: relative; z-index: 1; }
+.tal-wallet-body { padding: var(--space-4) var(--space-5) var(--space-5); }
+.tal-wallet-row { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); border-bottom: 1px solid var(--border); }
+.tal-wallet-row b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.tal-progress { margin-top: var(--space-4); }
+.tal-progress-track { height: 8px; border-radius: var(--radius-pill); background: var(--surface-sunken); overflow: hidden; }
+.tal-progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--loop); }
+.tal-progress-label { display: flex; justify-content: space-between; margin-top: var(--space-2); font: 600 12px/16px var(--font-sans); color: var(--ink-muted); }
+.tal-wallet-foot { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+.tal-wallet-foot .tal-btn { flex: 1; }
+
+/* ---------- PartnerCard ---------- */
+.tal-partner { display: flex; flex-direction: column; width: 100%; max-width: 360px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow .2s, transform .2s; }
+.tal-partner:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.tal-partner-head { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-4) var(--space-4) var(--space-3); }
+.tal-avatar { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: var(--radius-md); background: var(--primary); color: var(--primary-ink); font: 800 18px/1 var(--font-sans); }
+.tal-partner-name { margin: 0; font: 700 20px/28px var(--font-sans); color: var(--ink); }
+.tal-partner-meta { margin: 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.tal-partner-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-4); }
+.tal-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-4) var(--space-4) 0; padding: var(--space-2); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.tal-product { display: flex; flex-direction: column; gap: var(--space-1); text-decoration: none; color: inherit; }
+.tal-product-img { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); background: var(--surface-raised); overflow: hidden; }
+.tal-product-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tal-product-name { font: 600 12px/16px var(--font-sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tal-product-price { font: 700 14px/20px var(--font-sans); color: var(--ink); font-variant-numeric: tabular-nums; }
+.tal-product-price s { font-weight: 400; color: var(--ink-muted); margin-left: 4px; font-size: 12px; }
+.tal-deal { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-3) var(--space-4) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--primary-soft); color: var(--primary-text); font: 600 14px/20px var(--font-sans); }
+.tal-impact { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) var(--space-4) 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.tal-impact b { color: var(--loop-text); font-weight: 700; }
+.tal-partner-foot { display: flex; gap: var(--space-2); padding: var(--space-4); margin-top: auto; }
+.tal-partner-foot .tal-btn-primary { flex: 1; }
+
+/* ---------- EventCard ---------- */
+.tal-event { display: grid; grid-template-columns: 72px 1fr; gap: var(--space-4); width: 100%; max-width: 440px; padding: var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.tal-date { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80px; border-radius: var(--radius-md); background: var(--primary); color: var(--primary-ink); text-align: center; }
+.tal-date-dow { font: 600 12px/16px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; }
+.tal-date-day { font: 800 32px/36px var(--font-sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tal-date-mon { font: 600 12px/16px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; }
+.tal-event-kicker { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-1); }
+.tal-event-cat { font: 600 12px/16px var(--font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--primary-text); }
+.tal-event-title { margin: 0; font: 700 20px/28px var(--font-sans); color: var(--ink); }
+.tal-event-facts { display: grid; gap: var(--space-1); margin: var(--space-2) 0 0; padding: 0; list-style: none; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.tal-event-facts li { display: flex; align-items: center; gap: var(--space-2); }
+.tal-event-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.tal-attendees { display: flex; align-items: center; gap: var(--space-2); margin-right: auto; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+.tal-faces { display: flex; }
+.tal-faces span { width: 28px; height: 28px; border-radius: var(--radius-pill); border: 2px solid var(--surface-raised); margin-left: -8px; display: grid; place-items: center; font: 700 11px/1 var(--font-sans); background: var(--primary-soft); color: var(--primary-text); }
+.tal-faces span:first-child { margin-left: 0; }
+
+/* Event and notice list variant: compact row for the calendar column */
+.tal-event-row { display: grid; grid-template-columns: 56px 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.tal-event-row .tal-date { height: 56px; }
+.tal-event-row .tal-date-day { font-size: 22px; line-height: 24px; }
+
+@media (max-width: 480px) {
+  .tal-event { grid-template-columns: 56px 1fr; gap: var(--space-3); }
+  .tal-date { height: 64px; }
+  .tal-date-day { font-size: 24px; line-height: 28px; }
+  .tal-nav-search { display: none; }
+}
+
+/* ---------- Happy extras ---------- */
+/* Colour section bands: alternate full-bleed tinted bands to give long pages rhythm. */
+.tal-band { border-radius: var(--radius-xl); padding: var(--space-12) var(--space-8); }
+.tal-band { background: var(--primary-soft); }
+.tal-band-loop { background: var(--loop-soft); }
+/* Inline notice: warning always with its icon, so it never reads as a Shop accent. */
+.tal-notice { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font: 400 14px/20px var(--font-sans); }
+.tal-notice-warning { background: var(--warning-soft); color: var(--warning); }
+.tal-notice-success { background: var(--success-soft); color: var(--success); }
+.tal-notice-error { background: var(--error-soft); color: var(--error); }
+@media (prefers-reduced-motion: reduce) { .tal-root *, .tal-root *::before, .tal-root *::after { transition: none !important; } }
