@@ -127,3 +127,7 @@ curl -u "news-agent:xxxx xxxx xxxx xxxx xxxx xxxx" \
 
 - Endpoint documentation and a curl example also live in
   [`readme.txt`](readme.txt) in this plugin's root.
+
+## When Teatatu Data manages a list
+
+If the site uses Teatatu Data to manage sources or categories, creating or changing those terms here fails with `teatatu_news_managed_by_data` (HTTP 403). Look the item up in Teatatu Data instead (its `SKILL.md`) and propose any change there; once a steward approves it, it is copied here. Assigning existing terms to your drafts works as before.

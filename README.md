@@ -99,6 +99,10 @@ README.md                  this file
 LICENSE                    GPL-3.0
 ```
 
+## Teatatu Data (optional)
+
+With the [Teatatu Data](https://github.com/TeAtatu/Teatatu-data-management) plugin active, a steward can let it manage this plugin's sources and categories (its Connections tab). Teatatu Data then keeps those lists up to date on every site, linking existing terms, and they become read-only here. Without it, nothing changes. See `includes/teatatu-data-bridge.php`.
+
 ## Extending this plugin with AI
 
 [`prompt.md`](prompt.md) at the repo root is a condensed, reusable prompt

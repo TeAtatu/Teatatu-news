@@ -41,6 +41,7 @@ require_once TEATATU_NEWS_DIR . 'includes/rss-feeds.php';
 require_once TEATATU_NEWS_DIR . 'includes/rss-importer.php';
 require_once TEATATU_NEWS_DIR . 'includes/html-feeds.php';
 require_once TEATATU_NEWS_DIR . 'includes/html-importer.php';
+require_once TEATATU_NEWS_DIR . 'includes/teatatu-data-bridge.php';
 
 /**
  * Fired on plugin activation. Handles both single-site and network activation.

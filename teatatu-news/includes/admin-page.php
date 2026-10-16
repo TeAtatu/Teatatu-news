@@ -58,9 +58,13 @@ function teatatu_news_render_admin_page() {
 		if ( 'news' === $tab ) {
 			teatatu_news_render_news_tab();
 		} elseif ( 'sources' === $tab ) {
-			teatatu_news_render_term_tab( 'teatatu_news_source' );
+			if ( ! teatatu_news_render_managed_list( 'teatatu_news_source' ) ) {
+				teatatu_news_render_term_tab( 'teatatu_news_source' );
+			}
 		} elseif ( 'categories' === $tab ) {
-			teatatu_news_render_term_tab( 'teatatu_news_category' );
+			if ( ! teatatu_news_render_managed_list( 'teatatu_news_category' ) ) {
+				teatatu_news_render_term_tab( 'teatatu_news_category' );
+			}
 		} elseif ( 'rss' === $tab ) {
 			teatatu_news_render_rss_feeds_tab();
 		} elseif ( 'html' === $tab ) {

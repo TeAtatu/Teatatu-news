@@ -362,6 +362,12 @@ Configure the repository (and an access token, for a private fork) at
 **Network Admin > Settings > Teatatu News** (or **Settings > Teatatu News**
 on single-site).
 
+== Teatatu Data (optional) ==
+
+When the Teatatu Data plugin is active and a steward switches a list on in its **Connections** tab, Teatatu Data keeps this plugin's **Sources** and **Categories** up to date on every site. Existing terms are linked (term meta `teatatu_data_ref`), not replaced, so news items, URLs, shortcodes and REST are unchanged.
+
+While a list is managed it is read-only here — its tab shows the list with a link to Teatatu Data, and new or changed terms are refused on every path (these screens, term screens, REST, agents). Switch the list off, or deactivate Teatatu Data, and everything here is editable again with the last synced data kept. Code: `includes/teatatu-data-bridge.php`.
+
 == Uninstall ==
 
 By default, uninstalling this plugin only removes the `teatatu_news_agent`
