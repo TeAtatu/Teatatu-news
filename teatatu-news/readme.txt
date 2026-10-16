@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -362,6 +362,15 @@ Configure the repository (and an access token, for a private fork) at
 **Network Admin > Settings > Teatatu News** (or **Settings > Teatatu News**
 on single-site).
 
+To publish an update: raise the version in `teatatu-news.php` and
+`readme.txt`, push, then create a **GitHub Release** whose tag matches the
+new version (e.g. `v1.7.1`). A pushed commit or bare tag is not enough —
+only a published Release is detected. Sites pick it up within 12 hours (the
+release lookup is cached), or immediately via **Check for Updates Now** on
+the settings page. Private repositories aren't supported for installing the
+update package, since the access token is only sent when looking up
+releases, not when downloading the zip.
+
 == Teatatu Data (optional) ==
 
 When the Teatatu Data plugin is active and a steward switches a list on in its **Connections** tab, Teatatu Data keeps this plugin's **Sources** and **Categories** up to date on every site. Existing terms are linked (term meta `teatatu_data_ref`), not replaced, so news items, URLs, shortcodes and REST are unchanged.
@@ -379,6 +388,17 @@ configuration, and Source/Category term, on every site in the network.
 Since images are link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.7.1 =
+* Fixed: updating from a GitHub release would have installed the plugin one
+  folder too deep (`plugins/teatatu-news/teatatu-news/teatatu-news.php`),
+  because GitHub's zip contains the whole repo and the plugin lives in its
+  `teatatu-news/` subfolder. The updater now installs from whichever folder
+  actually contains the plugin file.
+* Fixed: the per-plugin "Enable auto-updates" toggle on the Plugins screen
+  was unavailable until an update already existed. The plugin is now always
+  registered with WordPress's update check, so the toggle is available
+  immediately.
 
 = 1.7.0 =
 * Added HTML Feeds: a second feed importer, alongside RSS Feeds, for sites

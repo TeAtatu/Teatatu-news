@@ -103,23 +103,17 @@ function teatatu_news_check_for_update( $transient ) {
 		return $transient;
 	}
 
-	$release = teatatu_news_fetch_latest_release();
-	if ( ! $release || empty( $release['tag_name'] ) ) {
-		return $transient;
-	}
-
-	$remote_version = ltrim( $release['tag_name'], 'vV' );
-	if ( ! $remote_version || ! version_compare( $remote_version, TEATATU_NEWS_VERSION, '>' ) ) {
-		return $transient;
-	}
+	$release        = teatatu_news_fetch_latest_release();
+	$remote_version = ( $release && ! empty( $release['tag_name'] ) ) ? ltrim( $release['tag_name'], 'vV' ) : '';
+	$has_update     = $remote_version && version_compare( $remote_version, TEATATU_NEWS_VERSION, '>' );
 
 	$item = array(
 		'id'            => 'teatatu-news/teatatu-news.php',
 		'slug'          => 'teatatu-news',
 		'plugin'        => TEATATU_NEWS_BASENAME,
-		'new_version'   => $remote_version,
+		'new_version'   => $has_update ? $remote_version : TEATATU_NEWS_VERSION,
 		'url'           => 'https://github.com/' . teatatu_news_get_github_repo(),
-		'package'       => isset( $release['zipball_url'] ) ? $release['zipball_url'] : '',
+		'package'       => ( $has_update && isset( $release['zipball_url'] ) ) ? $release['zipball_url'] : '',
 		'tested'        => get_bloginfo( 'version' ),
 		'requires'      => teatatu_news_get_plugin_header( 'RequiresWP' ),
 		'requires_php'  => teatatu_news_get_plugin_header( 'RequiresPHP' ),
@@ -127,10 +121,23 @@ function teatatu_news_check_for_update( $transient ) {
 		'banners'       => array(),
 	);
 
-	$transient->response[ TEATATU_NEWS_BASENAME ] = (object) $item;
-	if ( isset( $transient->no_update[ TEATATU_NEWS_BASENAME ] ) ) {
-		unset( $transient->no_update[ TEATATU_NEWS_BASENAME ] );
+	if ( $has_update ) {
+		$transient->response[ TEATATU_NEWS_BASENAME ] = (object) $item;
+		if ( isset( $transient->no_update[ TEATATU_NEWS_BASENAME ] ) ) {
+			unset( $transient->no_update[ TEATATU_NEWS_BASENAME ] );
+		}
+		return $transient;
 	}
+
+	// No newer release (or GitHub couldn't be reached): still register the
+	// plugin as "checked, nothing to update". WordPress only offers the
+	// per-plugin auto-update toggle for plugins listed in either `response`
+	// or `no_update`, so without this the toggle would be unavailable until
+	// an update already existed — too late to opt in beforehand.
+	if ( ! isset( $transient->no_update ) || ! is_array( $transient->no_update ) ) {
+		$transient->no_update = array();
+	}
+	$transient->no_update[ TEATATU_NEWS_BASENAME ] = (object) $item;
 
 	return $transient;
 }
@@ -175,8 +182,17 @@ function teatatu_news_plugins_api( $result, $action, $args ) {
 add_filter( 'upgrader_source_selection', 'teatatu_news_fix_source_dir', 10, 4 );
 
 /**
- * Renames the extracted GitHub zipball folder (`owner-repo-<sha>`) back to
- * `teatatu-news` so the update replaces the existing plugin folder cleanly.
+ * Points the upgrader at the actual plugin folder inside a GitHub zipball.
+ *
+ * GitHub's zipball unpacks to `owner-repo-<sha>/`, and in this repo the
+ * plugin itself lives one level further down, in `teatatu-news/` (next to
+ * README.md, prompt.md, LICENSE). Installing the outer folder as-is would
+ * nest the plugin one directory too deep
+ * (`plugins/teatatu-news/teatatu-news/teatatu-news.php`), so WordPress
+ * couldn't find it. This picks whichever folder really contains the main
+ * plugin file — the nested `teatatu-news/` subfolder for a zipball, or the
+ * extracted root itself for a purpose-built release zip — and renames it
+ * `teatatu-news` so the update replaces the existing folder cleanly.
  *
  * @param string      $source        Path to the extracted, unrenamed source.
  * @param string      $remote_source Path to the parent temp directory.
@@ -194,16 +210,29 @@ function teatatu_news_fix_source_dir( $source, $remote_source, $upgrader, $hook_
 		return $source;
 	}
 
-	$desired = trailingslashit( $remote_source ) . 'teatatu-news/';
-	if ( trailingslashit( $source ) === $desired ) {
+	$main_file = basename( TEATATU_NEWS_FILE );
+	$source    = trailingslashit( $source );
+	$nested    = $source . 'teatatu-news/';
+
+	if ( $wp_filesystem->exists( $nested . $main_file ) ) {
+		$plugin_dir = $nested;
+	} elseif ( $wp_filesystem->exists( $source . $main_file ) ) {
+		$plugin_dir = $source;
+	} else {
+		// Unrecognised package layout — leave it alone rather than guess.
 		return $source;
 	}
 
-	if ( $wp_filesystem && $wp_filesystem->move( $source, $desired, true ) ) {
+	$desired = trailingslashit( $remote_source ) . 'teatatu-news/';
+	if ( $plugin_dir === $desired ) {
 		return $desired;
 	}
 
-	return $source;
+	if ( $wp_filesystem->move( $plugin_dir, $desired, true ) ) {
+		return $desired;
+	}
+
+	return $plugin_dir;
 }
 
 add_action( 'admin_post_teatatu_news_check_updates', 'teatatu_news_handle_check_updates' );
