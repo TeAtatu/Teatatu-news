@@ -79,11 +79,11 @@ function ttn_latest( $count = 6, $args = array() ) {
 }
 
 /**
- * Where "See all events" goes: the Customizer override; else, on a single
- * site, this site's own Events archive when the Events plugin is active;
- * else the network's Events site. On multisite it is always the network's
- * Events site — the Events plugin is usually network-active, so every site
- * has an (empty) /events/ archive of its own, and the events live elsewhere.
+ * Where "See all events" goes: the Customizer override, else the Events
+ * section's address — this site's own Events archive on a single site, the
+ * network's Events site on multisite (the Events plugin is usually
+ * network-active, so every site has an empty /events/ archive of its own
+ * while the events live elsewhere) — else the default Events address.
  *
  * @return string
  */
@@ -92,14 +92,9 @@ function ttn_events_url() {
 	if ( $custom ) {
 		return $custom;
 	}
-	if ( ! is_multisite() && ttn_events_ready() ) {
-		$archive = get_post_type_archive_link( 'teatatu_event' );
-		if ( $archive ) {
-			return $archive;
-		}
-	}
-	$sites = ttn_network_sites();
-	return $sites['events'][1];
+	$def = ttn_section_plugins()['events'];
+	$url = ttn_section_url( $def );
+	return '' !== $url ? $url : $def['url'];
 }
 
 /**
@@ -318,31 +313,38 @@ function ttn_filter_chip_label( $key, $value ) {
 }
 
 /**
- * Section links under the header when no menu is assigned: Latest, the
- * most used categories, and What's on when events are available. The
+ * Section links under the header when no menu is assigned.
+ *
+ * With the News plugin active: Latest, the most used topics, and What's on
+ * when the Events plugin is active. Without it the header is not left
+ * empty: Home, the site's top pages, and What's on (same rule). The
  * current section gets aria-current (underlined in the site colour).
  */
 function ttn_primary_menu_fallback() {
-	if ( ! ttn_plugin_ready() ) {
-		return;
-	}
-	$links   = array();
-	$links[] = array( __( 'Latest', 'teatatu-news-theme' ), ttn_archive_url(), is_post_type_archive( 'teatatu_news' ) );
-	$terms   = get_terms(
-		array(
-			'taxonomy'   => 'teatatu_news_category',
-			'hide_empty' => true,
-			'orderby'    => 'count',
-			'order'      => 'DESC',
-			'number'     => 4,
-		)
-	);
-	if ( $terms && ! is_wp_error( $terms ) ) {
-		foreach ( $terms as $term ) {
-			$links[] = array( $term->name, get_term_link( $term ), is_tax( 'teatatu_news_category', $term->term_id ) );
+	$links = array();
+	if ( ttn_plugin_ready() ) {
+		$links[] = array( __( 'Latest', 'teatatu-news-theme' ), ttn_archive_url(), is_post_type_archive( 'teatatu_news' ) );
+		$terms   = get_terms(
+			array(
+				'taxonomy'   => 'teatatu_news_category',
+				'hide_empty' => true,
+				'orderby'    => 'count',
+				'order'      => 'DESC',
+				'number'     => 4,
+			)
+		);
+		if ( $terms && ! is_wp_error( $terms ) ) {
+			foreach ( $terms as $term ) {
+				$links[] = array( $term->name, get_term_link( $term ), is_tax( 'teatatu_news_category', $term->term_id ) );
+			}
+		}
+	} else {
+		$links[] = array( __( 'Home', 'teatatu-news-theme' ), home_url( '/' ), is_front_page() );
+		foreach ( get_pages( array( 'parent' => 0, 'sort_column' => 'menu_order,post_title', 'number' => 5 ) ) as $page ) {
+			$links[] = array( get_the_title( $page ), get_permalink( $page ), is_page( $page->ID ) );
 		}
 	}
-	if ( ttn_events_ready() ) {
+	if ( ttn_section_active( 'events' ) ) {
 		$links[] = array( __( 'What’s on', 'teatatu-news-theme' ), ttn_events_url(), false );
 	}
 	foreach ( $links as $link ) {

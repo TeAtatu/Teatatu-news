@@ -27,14 +27,15 @@ $share_url = get_theme_mod( 'ttn_share_url', '' );
 	</nav>
 	<div class="tal-nav-bar">
 		<a class="tal-wordmark" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">Te Atatū <span><?php esc_html_e( 'News', 'teatatu-news-theme' ); ?></span></a>
-		<?php if ( ttn_plugin_ready() ) : ?>
-			<form class="tal-nav-search" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
-				<?php echo ttn_icon( 'search', 16 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG. ?>
-				<label class="screen-reader-text" for="tal-nav-q"><?php esc_html_e( 'Search news', 'teatatu-news-theme' ); ?></label>
-				<input id="tal-nav-q" type="search" name="s" value="<?php echo is_search() ? esc_attr( get_search_query() ) : ''; ?>" placeholder="<?php esc_attr_e( 'Search news, notices, places…', 'teatatu-news-theme' ); ?>" />
+		<?php $news_search = ttn_plugin_ready(); ?>
+		<form class="tal-nav-search" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<?php echo ttn_icon( 'search', 16 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG. ?>
+			<label class="screen-reader-text" for="tal-nav-q"><?php echo esc_html( $news_search ? __( 'Search news', 'teatatu-news-theme' ) : __( 'Search this site', 'teatatu-news-theme' ) ); ?></label>
+			<input id="tal-nav-q" type="search" name="s" value="<?php echo is_search() ? esc_attr( get_search_query() ) : ''; ?>" placeholder="<?php echo esc_attr( $news_search ? __( 'Search news, notices, places…', 'teatatu-news-theme' ) : __( 'Search this site…', 'teatatu-news-theme' ) ); ?>" />
+			<?php if ( $news_search ) : ?>
 				<input type="hidden" name="post_type" value="teatatu_news" />
-			</form>
-		<?php endif; ?>
+			<?php endif; ?>
+		</form>
 		<?php if ( $share_url ) : ?>
 			<a class="tal-btn tal-btn-primary tal-btn-sm" href="<?php echo esc_url( $share_url ); ?>"><?php esc_html_e( 'Share a story', 'teatatu-news-theme' ); ?></a>
 		<?php endif; ?>
