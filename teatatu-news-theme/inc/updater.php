@@ -10,7 +10,9 @@
  * offers a theme update.
  *
  * Installing: automatically only when "Enable auto-updates" is on for this
- * theme (Appearance > Themes; Network Admin > Themes on multisite).
+ * theme — a link that can be switched on and off at any time (Appearance >
+ * Themes; Network Admin > Themes on multisite) — see
+ * ttn_updater_ensure_registered() for why the link is always available.
  * Otherwise the "update available" notice shows and an admin clicks
  * Update now. The GitHub repository and token come from the plugin's
  * settings (Settings > Teatatu News) when the plugin is active.
@@ -236,6 +238,42 @@ function ttn_updater_source_dir( $source, $remote_source, $upgrader, $hook_extra
 		return $desired;
 	}
 	return new WP_Error( 'ttn_move_failed', __( 'Could not prepare the Teatatu News theme update. Nothing was changed.', 'teatatu-news-theme' ) );
+}
+
+add_action( 'init', 'ttn_updater_ensure_registered', 30 );
+
+/**
+ * Keeps the theme in WordPress's theme update list, which is what makes the
+ * "Enable / Disable auto-updates" link appear for it (Appearance > Themes;
+ * Network Admin > Themes on multisite).
+ *
+ * WordPress rebuilds that list from scratch on every update check, and only
+ * runs the update code of the theme that is *active on the site doing the
+ * check*. On a network, a check run from any other site (or the Network
+ * Admin) therefore drops this theme from the list, and its toggle shows as
+ * unavailable until a check happens to run on the news site. So when this
+ * theme is running and finds itself missing, it puts itself back through the
+ * normal filter. Checked at most every ten minutes, at the cost of one
+ * option read per request in between.
+ */
+function ttn_updater_ensure_registered() {
+	$last = (int) get_option( 'ttn_updater_ensured', 0 );
+	if ( time() - $last < 10 * MINUTE_IN_SECONDS ) {
+		return;
+	}
+	update_option( 'ttn_updater_ensured', time() );
+
+	$slug      = ttn_updater_slug();
+	$transient = get_site_transient( 'update_themes' );
+	// Not built yet: core's own check will run our filter when it is.
+	if ( ! is_object( $transient ) || empty( $transient->checked ) ) {
+		return;
+	}
+	if ( ! empty( $transient->response[ $slug ] ) || ! empty( $transient->no_update[ $slug ] ) ) {
+		return;
+	}
+	// Re-saving runs ttn_updater_check() through core's own filter.
+	set_site_transient( 'update_themes', $transient );
 }
 
 add_filter( 'auto_update_theme', 'ttn_updater_auto_update_gate', PHP_INT_MAX, 2 );

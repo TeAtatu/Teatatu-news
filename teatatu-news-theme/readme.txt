@@ -1,7 +1,7 @@
 === Teatatu News Theme ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPL-3.0
 
 Display theme for a Te Atatū Peninsula news site. Requires the Teatatu News plugin; shows a "What's on" strip when the Teatatu Events plugin is also active.
@@ -57,12 +57,16 @@ Styled with the Te Atatū Local design system, the shared look of the five Te At
 The theme updates itself from the same GitHub release as the Teatatu News plugin (repository and token are set in the plugin's Settings > Teatatu News; default TeAtatu/Teatatu-news).
 
 * It compares its own Version in teatatu-news-theme/style.css at the latest release, so a plugin-only release doesn't offer a theme update.
-* Updates install automatically only when "Enable auto-updates" is on for the theme (Appearance > Themes; Network Admin > Themes on multisite). Otherwise click Update now.
+* Auto-updates are off until you turn them on, and can be turned on or off at any time with the "Enable / Disable auto-updates" link (Appearance > Themes; Network Admin > Themes on multisite). With them off, an "update available" notice shows and you click Update now.
+* On a network, WordPress only runs the update code of the theme active on the site doing the check, so a check from another site (or the Network Admin) would drop this theme from the update list and hide its auto-update link. The theme puts itself back whenever the news site gets a request (checked at most every ten minutes), so the link is always available.
 * Only the teatatu-news-theme/ folder from the release is installed.
 
 To release: bump Version in style.css (and/or the plugin header), commit, then publish a GitHub release tagged vX.Y.Z.
 
 == Changelog ==
+
+= 1.1.1 =
+* Fixed: the "Enable / Disable auto-updates" link for the theme was missing in the dashboard on a network whenever an update check last ran from a different site. The theme now keeps itself in WordPress's update list so the link is always there.
 
 = 1.1.0 =
 * The network strip now shows Events, Homes and Market only while Teatatu Events, Teatatu Homes and Teatatu Market are active (here, network-wide, or on any site of the network), and links each to its real site address rather than a fixed one. "What's on" in the section links and footer follows the same rule. With the News plugin disabled, the header's search and section links stay (site search, Home and top pages) rather than disappearing.
