@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TTN_THEME_VERSION', '1.1.2' );
+define( 'TTN_THEME_VERSION', '1.1.3' );
 
 require_once get_template_directory() . '/inc/template-tags.php';
 require_once get_template_directory() . '/inc/customizer.php';
@@ -252,17 +252,37 @@ function ttn_network_sites() {
 
 /**
  * The sections that appear only when their plugin is active: key =>
- * {file: plugin main file name, post_type: its listing post type (for a
- * single-site install), url: default address}.
+ * {file: plugin main file name, master: the plugin's Master Site network
+ * setting, post_type: its listing post type (for a single-site install),
+ * url: default address}.
  *
  * @return array[]
  */
 function ttn_section_plugins() {
 	return array(
-		'events' => array( 'file' => 'teatatu-events.php', 'post_type' => 'teatatu_event', 'url' => 'https://events.teatatu.nz/', 'key' => 'events' ),
-		'homes'  => array( 'file' => 'teatatu-homes.php', 'post_type' => 'teatatu_home', 'url' => 'https://homes.teatatu.nz/', 'key' => 'homes' ),
-		'market' => array( 'file' => 'teatatu-market.php', 'post_type' => '', 'url' => 'https://market.teatatu.nz/', 'key' => 'market' ),
+		'events' => array( 'file' => 'teatatu-events.php', 'master' => 'teatatu_events_master_site_id', 'post_type' => 'teatatu_event', 'url' => 'https://events.teatatu.nz/', 'key' => 'events' ),
+		'homes'  => array( 'file' => 'teatatu-homes.php', 'master' => 'teatatu_homes_master_site_id', 'post_type' => 'teatatu_home', 'url' => 'https://homes.teatatu.nz/', 'key' => 'homes' ),
+		'market' => array( 'file' => 'teatatu-market.php', 'master' => 'teatatu_market_master_site_id', 'post_type' => '', 'url' => 'https://market.teatatu.nz/', 'key' => 'market' ),
 	);
+}
+
+/**
+ * The Master Site a section's plugin has set (Network Admin > Settings >
+ * Teatatu Events / Homes / Market), or 0. Read through the plugin's own
+ * teatatu_<name>_get_master_site_id() when it has one, else its network
+ * setting directly (the theme may run on a site where the plugin isn't
+ * loaded). Ignored if that site no longer exists.
+ *
+ * @param array $def Section definition from ttn_section_plugins().
+ * @return int
+ */
+function ttn_section_master_site_id( $def ) {
+	if ( ! is_multisite() || empty( $def['master'] ) ) {
+		return 0;
+	}
+	$getter = str_replace( '_master_site_id', '_get_master_site_id', $def['master'] );
+	$id     = function_exists( $getter ) ? (int) call_user_func( $getter ) : (int) get_site_option( $def['master'], 0 );
+	return $id && get_site( $id ) ? $id : 0;
 }
 
 /**
@@ -332,9 +352,11 @@ function ttn_section_active( $key ) {
 /**
  * The address for a section, or '' when its plugin isn't active.
  *
- * - Multisite: the site whose address starts with the section name
- *   (events.example.nz or example.nz/events/) when the plugin runs there,
- *   else the one site it is activated on, else the default address.
+ * - Multisite: the plugin's own Master Site (Network Admin > Settings >
+ *   Teatatu Events / Homes / Market) when one is set; else the site whose
+ *   address starts with the section name (events.example.nz or
+ *   example.nz/events/) when the plugin runs there; else the one site it is
+ *   activated on; else the default address.
  * - Single site (the plugin runs on this site): its listing page, else the
  *   default address.
  *
@@ -349,6 +371,10 @@ function ttn_section_url( $def ) {
 	if ( ! is_multisite() ) {
 		$archive = $def['post_type'] && post_type_exists( $def['post_type'] ) ? get_post_type_archive_link( $def['post_type'] ) : '';
 		return $archive ? $archive : $def['url'];
+	}
+	$master = ttn_section_master_site_id( $def );
+	if ( $master ) {
+		return get_home_url( $master, '/' );
 	}
 	$candidates = $activity['network'] ? get_sites( array( 'fields' => 'ids', 'number' => 500 ) ) : $activity['sites'];
 	foreach ( $candidates as $site_id ) {

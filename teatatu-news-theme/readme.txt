@@ -1,7 +1,7 @@
 === Teatatu News Theme ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPL-3.0
 
 Display theme for a Te Atatū Peninsula news site. Requires the Teatatu News plugin; shows a "What's on" strip when the Teatatu Events plugin is also active.
@@ -48,7 +48,7 @@ Styled with the Te Atatū Local design system, the shared look of the five Te At
 * <html data-site="news"> makes every component use the News accent, Kōtare blue. A wrapper with data-site="events" (the What's on band and panel) switches back to Pōhutukawa.
 * The header is the shared NetworkNav: the black strip linking the Te Atatū sites the "Te Atatū News" wordmark, search, "Share a story", and the section links.
 * The strip follows the plugins: Te Atatū and News (this site) always show; Events shows only while Teatatu Events (teatatu-events.php) is active, Homes while Teatatu Homes (teatatu-homes.php) is, and Market while Teatatu Market (teatatu-market.php) is. A plugin counts as active when it is active on this site, network-activated, or — on multisite — active on any site of the network, since each Te Atatū site is its own site. Plugin files are matched by file name, whatever their folder.
-* Each item links to its real address: on multisite the network site whose address starts with the section name (events.example.nz or example.nz/events/), else the one site the plugin is active on; on a single site its listing page; otherwise the default teatatu.nz address. The scan of each site is cached for ten minutes and cleared whenever a plugin is activated or deactivated. The same rule decides whether "What's on" appears in the section links and footer. Filter `ttn_network_sites` to change labels, addresses or the list itself.
+* Each item links to its real address. On multisite that is the Master Site the item's own plugin has set (Network Admin > Settings > Teatatu Events / Homes / Market; the theme asks the plugin, or reads its network setting when the plugin isn't loaded on this site). With no Master Site set (or one that no longer exists) it falls back to the network site whose address starts with the section name (events.example.nz or example.nz/events/), then to the one site the plugin is active on, and finally to the default teatatu.nz address. On a single site it is the plugin's listing page. An item still only shows while its plugin is active, whatever the Master Site says. The scan of each site is cached for ten minutes and cleared whenever a plugin is activated or deactivated. The same rule decides whether "What's on" appears in the section links and footer. Filter `ttn_network_sites` to change labels, addresses or the list itself.
 * style.css lays out the pages using only design-system tokens. When the design system changes, re-copy both CSS files rather than editing them here.
 * Font: Plus Jakarta Sans (400, 600, 700, 800) from Google Fonts.
 
@@ -65,6 +65,9 @@ The theme updates itself from the same GitHub release as the Teatatu News plugin
 To release: bump Version in style.css (and/or the plugin header), commit, then publish a GitHub release tagged vX.Y.Z.
 
 == Changelog ==
+
+= 1.1.3 =
+* The Events, Homes and Market links in the network strip (and "See all events") now use the Master Site set in each of those plugins, falling back to the previous address detection when none is set.
 
 = 1.1.2 =
 * Fixed: the theme's "Enable / Disable auto-updates" link was missing in Network Admin > Themes. The Teatatu News plugin (1.7.2) now runs the theme's update checks from its own copy of the logic, so the theme is always in WordPress's update list; this theme's updater is the fallback for when the plugin isn't active. Auto-updates are switched on once by default, then follow the dashboard link.
