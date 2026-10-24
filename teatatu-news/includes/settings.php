@@ -166,6 +166,20 @@ function teatatu_news_render_settings_page() {
 		<hr />
 		<h2><?php esc_html_e( 'Updates', 'teatatu-news' ); ?></h2>
 		<p><?php esc_html_e( 'Current version:', 'teatatu-news' ); ?> <strong><?php echo esc_html( TEATATU_NEWS_VERSION ); ?></strong></p>
+		<?php
+		$theme_slug = teatatu_news_theme_slug();
+		if ( $theme_slug ) :
+			$news_theme = wp_get_theme( $theme_slug );
+			$theme_auto = in_array( $theme_slug, (array) get_site_option( 'auto_update_themes', array() ), true );
+			$themes_url = is_multisite() ? network_admin_url( 'themes.php' ) : admin_url( 'themes.php' );
+			?>
+			<p>
+				<?php esc_html_e( 'Teatatu News Theme:', 'teatatu-news' ); ?> <strong><?php echo esc_html( $news_theme->get( 'Version' ) ); ?></strong>
+				· <?php echo $theme_auto ? esc_html__( 'auto-updates on', 'teatatu-news' ) : esc_html__( 'auto-updates off', 'teatatu-news' ); ?>
+				· <a href="<?php echo esc_url( $themes_url ); ?>"><?php echo $theme_auto ? esc_html__( 'Turn off in Themes', 'teatatu-news' ) : esc_html__( 'Turn on in Themes', 'teatatu-news' ); ?></a>
+			</p>
+			<p class="description"><?php esc_html_e( 'The theme updates from the same GitHub release as this plugin, when its own version has gone up. Its auto-updates follow the Enable / Disable auto-updates link for the theme on the Themes screen.', 'teatatu-news' ); ?></p>
+		<?php endif; ?>
 		<form method="post" action="<?php echo esc_url( $post_url ); ?>">
 			<?php wp_nonce_field( 'teatatu_news_check_updates', 'teatatu_news_check_updates_nonce' ); ?>
 			<input type="hidden" name="action" value="teatatu_news_check_updates" />

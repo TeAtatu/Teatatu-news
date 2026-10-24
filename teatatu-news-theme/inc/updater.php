@@ -1,18 +1,24 @@
 <?php
 /**
- * Self-hosted GitHub-release-based updater for the theme, mirroring the
- * Teatatu News plugin's updater (teatatu-news/includes/updater.php).
+ * Self-hosted GitHub-release-based updater for the theme — the FALLBACK copy,
+ * used only when the Teatatu News plugin isn't active. When it is, the
+ * plugin runs the same checks itself (teatatu-news/includes/theme-updater.php)
+ * because the plugin is loaded on every site and theme code isn't, and this
+ * file steps aside. The two are deliberately separate copies: neither side
+ * reads the other's files, so the plugin and the theme can be edited,
+ * versioned and released independently. Keep the two in step by hand.
  *
- * One GitHub release (latest, tag vX.Y.Z) ships both the plugin and this
- * theme. The tag only points at the release: the theme's *own* Version
- * header in teatatu-news-theme/style.css at that tag is compared with the
- * installed version, so a release that only changes the plugin never
- * offers a theme update.
+ * One GitHub release (latest, tag vX.Y.Z) can carry the plugin, the theme or
+ * both. The theme's *own* Version header in teatatu-news-theme/style.css at
+ * that tag is compared with the installed version, so a release that only
+ * changes the plugin never offers a theme update.
  *
  * Installing: automatically only when "Enable auto-updates" is on for this
- * theme — a link that can be switched on and off at any time (Appearance >
- * Themes; Network Admin > Themes on multisite) — see
- * ttn_updater_ensure_registered() for why the link is always available.
+ * theme. It is switched on once, the first time the theme is found, and from
+ * then on follows WordPress's own "Enable / Disable auto-updates" link
+ * (Appearance > Themes; Network Admin > Themes on multisite), which can be
+ * switched either way at any time. See ttn_updater_ensure_registered() for
+ * how the theme stays in WordPress's update list without the plugin.
  * Otherwise the "update available" notice shows and an admin clicks
  * Update now. The GitHub repository and token come from the plugin's
  * settings (Settings > Teatatu News) when the plugin is active.
@@ -20,6 +26,13 @@
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+// The Teatatu News plugin runs these checks itself (includes/theme-updater.php),
+// because it is loaded on every site and theme code isn't. This copy is the
+// fallback for when the plugin isn't active.
+if ( function_exists( 'teatatu_news_theme_updater_loaded' ) ) {
+	return;
 }
 
 /**
@@ -274,6 +287,27 @@ function ttn_updater_ensure_registered() {
 	}
 	// Re-saving runs ttn_updater_check() through core's own filter.
 	set_site_transient( 'update_themes', $transient );
+}
+
+add_action( 'admin_init', 'ttn_updater_default_auto_update' );
+
+/**
+ * Switches auto-updates on for the theme once, the first time this runs
+ * with the theme installed. After that WordPress's own "Enable / Disable
+ * auto-updates" link decides: turning them off is remembered and never
+ * undone here. Filter `teatatu_news_theme_default_auto_update` to false to skip.
+ */
+function ttn_updater_default_auto_update() {
+	if ( get_site_option( 'teatatu_news_theme_autoupdate_seeded' ) || get_site_option( 'ttn_theme_autoupdate_seeded' ) || ! apply_filters( 'teatatu_news_theme_default_auto_update', true ) ) {
+		return;
+	}
+	$slug    = ttn_updater_slug();
+	$enabled = (array) get_site_option( 'auto_update_themes', array() );
+	if ( ! in_array( $slug, $enabled, true ) ) {
+		$enabled[] = $slug;
+		update_site_option( 'auto_update_themes', array_values( array_unique( $enabled ) ) );
+	}
+	update_site_option( 'teatatu_news_theme_autoupdate_seeded', 1 );
 }
 
 add_filter( 'auto_update_theme', 'ttn_updater_auto_update_gate', PHP_INT_MAX, 2 );

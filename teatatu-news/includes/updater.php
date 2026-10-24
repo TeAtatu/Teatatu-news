@@ -86,8 +86,36 @@ function teatatu_news_fetch_latest_release( $force = false ) {
 		return false;
 	}
 
+	// The plugin's own Version at the release tag, not the tag name: one
+	// release can carry a theme-only change, and that must never offer a
+	// plugin update (or the reverse). Empty when it can't be read.
+	$body['teatatu_news_version'] = ! empty( $body['tag_name'] ) ? teatatu_news_fetch_remote_version( $repo, $body['tag_name'], $headers ) : '';
+
 	set_site_transient( $cache_key, $body, 12 * HOUR_IN_SECONDS );
 	return $body;
+}
+
+/**
+ * Reads the Version header of teatatu-news/teatatu-news.php at a tag.
+ *
+ * @param string $repo    owner/repo.
+ * @param string $tag     Release tag.
+ * @param array  $headers Request headers (User-Agent, token).
+ * @return string Version, or '' if it couldn't be read.
+ */
+function teatatu_news_fetch_remote_version( $repo, $tag, $headers ) {
+	$headers['Accept'] = 'application/vnd.github.raw+json';
+	$response          = wp_remote_get(
+		"https://api.github.com/repos/{$repo}/contents/teatatu-news/teatatu-news.php?ref=" . rawurlencode( $tag ),
+		array(
+			'headers' => $headers,
+			'timeout' => 15,
+		)
+	);
+	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+		return '';
+	}
+	return preg_match( '/^[ \t\/*#@]*Version:\s*([0-9A-Za-z.\-+]+)/mi', substr( wp_remote_retrieve_body( $response ), 0, 8192 ), $m ) ? $m[1] : '';
 }
 
 add_filter( 'pre_set_site_transient_update_plugins', 'teatatu_news_check_for_update' );
@@ -104,7 +132,7 @@ function teatatu_news_check_for_update( $transient ) {
 	}
 
 	$release        = teatatu_news_fetch_latest_release();
-	$remote_version = ( $release && ! empty( $release['tag_name'] ) ) ? ltrim( $release['tag_name'], 'vV' ) : '';
+	$remote_version = ( $release && ! empty( $release['teatatu_news_version'] ) ) ? $release['teatatu_news_version'] : '';
 	$has_update     = $remote_version && version_compare( $remote_version, TEATATU_NEWS_VERSION, '>' );
 
 	$item = array(
@@ -158,7 +186,7 @@ function teatatu_news_plugins_api( $result, $action, $args ) {
 	}
 
 	$release        = teatatu_news_fetch_latest_release();
-	$remote_version = ( $release && ! empty( $release['tag_name'] ) ) ? ltrim( $release['tag_name'], 'vV' ) : TEATATU_NEWS_VERSION;
+	$remote_version = ( $release && ! empty( $release['teatatu_news_version'] ) ) ? $release['teatatu_news_version'] : TEATATU_NEWS_VERSION;
 	$changelog      = ( $release && ! empty( $release['body'] ) ) ? $release['body'] : '';
 
 	$info = array(
@@ -252,6 +280,9 @@ function teatatu_news_handle_check_updates() {
 
 	delete_site_transient( 'teatatu_news_github_release' );
 	delete_site_transient( 'update_plugins' );
+	// The theme's update checks run from this plugin too (includes/theme-updater.php).
+	delete_site_transient( 'teatatu_news_theme_github_release' );
+	delete_site_transient( 'update_themes' );
 
 	$redirect_base = is_multisite() ? network_admin_url( 'settings.php' ) : admin_url( 'options-general.php' );
 	wp_safe_redirect( add_query_arg( array( 'page' => 'teatatu-news-settings', 'teatatu_news_settings_saved' => '1' ), $redirect_base ) );

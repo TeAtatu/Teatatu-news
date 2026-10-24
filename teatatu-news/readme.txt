@@ -4,7 +4,7 @@ Tags: news, custom post type, rest api, multisite, ai agent
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.7.2
 License: GPL-3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -362,14 +362,9 @@ Configure the repository (and an access token, for a private fork) at
 **Network Admin > Settings > Teatatu News** (or **Settings > Teatatu News**
 on single-site).
 
-To publish an update: raise the version in `teatatu-news.php` and
-`readme.txt`, push, then create a **GitHub Release** whose tag matches the
-new version (e.g. `v1.7.1`). A pushed commit or bare tag is not enough —
-only a published Release is detected. Sites pick it up within 12 hours (the
-release lookup is cached), or immediately via **Check for Updates Now** on
-the settings page. Private repositories aren't supported for installing the
-update package, since the access token is only sent when looking up
-releases, not when downloading the zip.
+To publish an update: raise the Version in `teatatu-news.php` (and the `Stable tag` here), push, then create a **GitHub Release** (tag e.g. `v1.7.3`). A pushed commit or bare tag is not enough — only a published Release is detected. The tag only points at the commit: each side compares its *own* Version at that tag with what is installed, so a release can carry a plugin change, a theme change (raise the theme's Version in `teatatu-news-theme/style.css`) or both, and only the side whose version went up is offered. Sites pick it up within 12 hours (the release lookup is cached), or immediately via **Check for Updates Now** on the settings page. Private repositories aren't supported for installing the update package, since the access token is only sent when looking up releases, not when downloading the zip.
+
+The Teatatu News Theme (`teatatu-news-theme/`) is a separate product in the same repository: it has its own version and changelog, is installed and activated on its own, and its updates are shown and switched on or off on the Themes screen. The plugin runs the theme's update checks (see 1.7.2) but reads nothing from the theme's files.
 
 == Teatatu Data (optional) ==
 
@@ -388,6 +383,11 @@ configuration, and Source/Category term, on every site in the network.
 Since images are link-only, there is never any local media to clean up.
 
 == Changelog ==
+
+= 1.7.2 =
+* Plugin and theme are now updated independently. The plugin's update check compares the plugin's own Version at the latest release (read from teatatu-news.php at the release tag) instead of the tag name, so a release that only changes the News theme no longer offers a plugin update — and the theme does the same with its own Version, so a plugin-only release never offers a theme update.
+* The plugin now also runs the Teatatu News Theme's update checks (includes/theme-updater.php, self-contained — it reads nothing from the theme's files). WordPress rebuilds its theme update list from the main site, and when Network Admin > Themes is opened, where the theme's own code isn't loaded, so the theme dropped out of the list and its "Enable / Disable auto-updates" link vanished. The theme keeps its own copy of the logic for when the plugin isn't active.
+* Auto-updates for the theme are switched on once, the first time it is found, and then follow the Enable / Disable auto-updates link on the Themes screen (never overridden). The Updates section of this plugin's settings shows the theme's version and auto-update state.
 
 = 1.7.1 =
 * Fixed: updating from a GitHub release would have installed the plugin one

@@ -1,7 +1,7 @@
 === Teatatu News Theme ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPL-3.0
 
 Display theme for a Te Atatū Peninsula news site. Requires the Teatatu News plugin; shows a "What's on" strip when the Teatatu Events plugin is also active.
@@ -57,13 +57,18 @@ Styled with the Te Atatū Local design system, the shared look of the five Te At
 The theme updates itself from the same GitHub release as the Teatatu News plugin (repository and token are set in the plugin's Settings > Teatatu News; default TeAtatu/Teatatu-news).
 
 * It compares its own Version in teatatu-news-theme/style.css at the latest release, so a plugin-only release doesn't offer a theme update.
-* Auto-updates are off until you turn them on, and can be turned on or off at any time with the "Enable / Disable auto-updates" link (Appearance > Themes; Network Admin > Themes on multisite). With them off, an "update available" notice shows and you click Update now.
-* On a network, WordPress only runs the update code of the theme active on the site doing the check, so a check from another site (or the Network Admin) would drop this theme from the update list and hide its auto-update link. The theme puts itself back whenever the news site gets a request (checked at most every ten minutes), so the link is always available.
-* Only the teatatu-news-theme/ folder from the release is installed.
+* Auto-updates are switched on once, the first time the theme is found (turn that default off with the `teatatu_news_theme_default_auto_update` filter). After that WordPress's "Enable / Disable auto-updates" link for the theme decides, and turning them off is never undone (Appearance > Themes; Network Admin > Themes on multisite). With them off, an "update available" notice shows and you click Update now.
+* WordPress rebuilds its theme update list from the main site, and when Network Admin > Themes is opened, and only runs the update code of the theme active on the site doing the check — so a theme's own code can't keep it in the list, and the auto-updates link only exists for listed themes. When the Teatatu News plugin is active it runs this theme's update checks itself from its own copy of this logic (teatatu-news/includes/theme-updater.php), and this theme's inc/updater.php steps aside. Without the plugin this copy is used, and the theme re-lists itself whenever the news site gets a request (checked at most every ten minutes).
+* The theme and the plugin are independent: neither reads the other's files, each has its own version, and a release that only changes one never offers an update for the other. The two update copies are kept in step by hand.
+* The plugin's Settings > Teatatu News page shows the theme's version and auto-update state.
 
 To release: bump Version in style.css (and/or the plugin header), commit, then publish a GitHub release tagged vX.Y.Z.
 
 == Changelog ==
+
+= 1.1.2 =
+* Fixed: the theme's "Enable / Disable auto-updates" link was missing in Network Admin > Themes. The Teatatu News plugin (1.7.2) now runs the theme's update checks from its own copy of the logic, so the theme is always in WordPress's update list; this theme's updater is the fallback for when the plugin isn't active. Auto-updates are switched on once by default, then follow the dashboard link.
+* The theme and plugin are independent: updates compare each side's own Version, so a release that only changes the plugin never offers a theme update.
 
 = 1.1.1 =
 * Fixed: the "Enable / Disable auto-updates" link for the theme was missing in the dashboard on a network whenever an update check last ran from a different site. The theme now keeps itself in WordPress's update list so the link is always there.
